@@ -84,6 +84,9 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
     def argsort(self, axis=-1, kind=None, order=None, *, stable=None):
         return self.materialize().argsort(axis, kind, order, stable=stable)
 
+    def byteswap(self, inplace=False):
+        return self.materialize().byteswap(inplace)
+
     @property
     def dtype(self) -> DType:
         return self._dtype
