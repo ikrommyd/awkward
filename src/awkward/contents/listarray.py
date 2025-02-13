@@ -1562,10 +1562,14 @@ class ListArray(ListMeta[Content], Content):
         ):
             startsmin = self._backend.index_nplike.min(self._starts.data)
             starts = ak.index.Index(
-                self._starts.data - startsmin, nplike=self._backend.index_nplike, make_virtual=False
+                self._starts.data - startsmin,
+                nplike=self._backend.index_nplike,
+                make_virtual=False,
             )
             stops = ak.index.Index(
-                self._stops.data - startsmin, nplike=self._backend.index_nplike, make_virtual=False
+                self._stops.data - startsmin,
+                nplike=self._backend.index_nplike,
+                make_virtual=False,
             )
             content = self._content[
                 startsmin : self._backend.index_nplike.max(self._stops.data)
