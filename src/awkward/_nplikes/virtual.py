@@ -48,11 +48,6 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
         generator: Callable[[], ArrayLike],
         form_key: str | None = None,
     ) -> None:
-        if not isinstance(nplike, (ak._nplikes.numpy.Numpy, ak._nplikes.cupy.Cupy)):
-            raise ValueError(
-                f"Only numpy and cupy nplikes are supported for VirtualArray. Received {type(nplike)}"
-            )
-
         # array metadata
         self._nplike = nplike
         self._shape = shape
@@ -60,6 +55,26 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
         self._array: Sentinel | ArrayLike = UNMATERIALIZED
         self._generator = generator
         self._form_key = form_key
+
+    def tobytes(self, order="C") -> bytes:
+        return self.materialize().tobytes(order)
+
+    def tostring(self, order="C") -> bytes:
+        return self.materialize().tostring(order)
+
+    @property
+    def real(self):
+        return self.materialize().real
+
+    @property
+    def imag(self):
+        return self.materialize().imag
+
+    def max(self, axis=None, out=None, keepdims=False):
+        return self.materialize().max(axis, out, keepdims)
+
+    def min(self, axis=None, out=None, keepdims=False):
+        return self.materialize().min(axis, out, keepdims)
 
     @property
     def dtype(self) -> DType:

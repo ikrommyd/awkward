@@ -69,10 +69,8 @@ class Index:
         data = self._nplike.ascontiguousarray(
             self._nplike.asarray(data, dtype=self._expected_dtype)
         )
-        if (
-            make_virtual
-            and not isinstance(data, (VirtualArray, PlaceholderArray, TypeTracerArray))
-            and not isinstance(self._nplike, Jax)
+        if make_virtual and not isinstance(
+            data, (VirtualArray, PlaceholderArray, TypeTracerArray)
         ):
             self._data = VirtualArray(
                 self._nplike,

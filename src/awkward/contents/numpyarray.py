@@ -121,10 +121,8 @@ class NumpyArray(NumpyMeta, Content):
             backend = backend_of_obj(data, default=NumpyBackend.instance())
 
         data = backend.nplike.asarray(data)
-        if (
-            make_virtual
-            and not isinstance(data, (VirtualArray, PlaceholderArray, TypeTracerArray))
-            and not isinstance(backend, Jax)
+        if make_virtual and not isinstance(
+            data, (VirtualArray, PlaceholderArray, TypeTracerArray)
         ):
             self._data = VirtualArray(
                 backend.nplike,
