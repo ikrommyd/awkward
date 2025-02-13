@@ -81,6 +81,9 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
     def min(self, axis=None, out=None, keepdims=False):
         return self.materialize().min(axis, out, keepdims)
 
+    def argsort(self, axis=-1, kind=None, order=None, *, stable=None):
+        return self.materialize().argsort(axis, kind, order, stable=stable)
+
     @property
     def dtype(self) -> DType:
         return self._dtype
