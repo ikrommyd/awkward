@@ -12,7 +12,6 @@ numba = pytest.importorskip("numba")
 ak.numba.register_and_check()
 
 
-@pytest.mark.skip(reason="Doesn't work with virtual arrays")
 def test():
     @numba.njit
     def f1(x):
