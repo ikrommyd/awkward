@@ -1968,7 +1968,6 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
                 else:
                     string_type = pyarrow.large_binary()
 
-            breakpoint()
             return pyarrow.Array.from_buffers(
                 ak._connect.pyarrow.to_awkwardarrow_type(
                     string_type,

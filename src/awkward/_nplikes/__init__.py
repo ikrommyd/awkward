@@ -25,9 +25,6 @@ def to_nplike(
                 f"internal error: expected an array supported by an existing nplike, got {type(array).__name__!r}"
             )
 
-    if from_nplike is nplike:
-        return array
-
     if isinstance(array, awkward._nplikes.virtual.VirtualArray):
         array = array.materialize()
 
@@ -35,6 +32,9 @@ def to_nplike(
         raise TypeError(
             "Converting from an nplike without known data to an nplike with known data is not supported"
         )
+
+    if from_nplike is nplike:
+        return array
 
     # Copy to host memory
     if isinstance(from_nplike, awkward._nplikes.cupy.Cupy) and not isinstance(
