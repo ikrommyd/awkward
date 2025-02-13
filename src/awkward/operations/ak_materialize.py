@@ -63,7 +63,7 @@ def _impl(array, highlevel, behavior, attrs):
                 out = buffer.materialize()
             else:
                 out = buffer
-            return ak.contents.NumpyArray(out, parameters=layout.parameters)
+            return ak.contents.NumpyArray(out, parameters=layout.parameters, make_virtual=False)
         else:
             return None
 

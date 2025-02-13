@@ -2226,7 +2226,7 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
         if self._backend.nplike.known_data:
             offsetsmin = self._offsets[0]
             offsets = ak.index.Index(
-                self._offsets.data - offsetsmin, nplike=self._backend.index_nplike
+                self._offsets.data - offsetsmin, nplike=self._backend.index_nplike, make_virtual=False
             )
             content = self._content[offsetsmin : self._offsets[-1]]
         else:

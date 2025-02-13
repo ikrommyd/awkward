@@ -172,9 +172,7 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
         return self.materialize().data
 
     def __array__(self, *args, **kwargs):
-        raise AssertionError(
-            "The '__array__' method should never be called directly on a VirtualArray."
-        )
+        return self.materialize()
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         return self.nplike.apply_ufunc(ufunc, method, inputs, kwargs)
