@@ -275,10 +275,14 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
 
     def __dlpack_device__(self) -> tuple[int, int]:
         array = self.materialize()
-        return array.__dlpack_device__()
+        maybe_func = getattr(array, "__dlpack_device__", None)
+        if maybe_func is None:
+            raise AttributeError(f"'{type(array)}' object has no attribute '__dlpack_device__'")
+        return maybe_func()
 
-    def __dlpack__(self, *args, **kwargs):
+    def __dlpack__(self, stream: Any = None) -> Any:
         array = self.materialize()
-        if args or kwargs:
-            return array.__dlpack__(*args, **kwargs)
-        return array.__dlpack__()
+        maybe_func = getattr(array, "__dlpack__", None)
+        if maybe_func is None:
+            raise AttributeError(f"'{type(array)}' object has no attribute '__dlpack__'")
+        return maybe_func(stream=stream)
