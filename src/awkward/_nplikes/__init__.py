@@ -29,19 +29,7 @@ def to_nplike(
         return array
 
     if isinstance(array, awkward._nplikes.virtual.VirtualArray):
-        if not array.is_materialized:
-            raise TypeError(
-                "Cannot convert a VirtualArray to a different nplike without materializing it first. Use ak.materialize on the array to do so."
-            )
-        else:
-            if isinstance(
-                nplike, (awkward._nplikes.numpy.Numpy, awkward._nplikes.cupy.Cupy)
-            ):
-                array = array.materialize()
-            else:
-                raise TypeError(
-                    f"Only numpy and cupy nplikes are supported for VirtualArray. Received {type(nplike)}"
-                )
+        array = array.materialize()
 
     if nplike.known_data and not from_nplike.known_data:
         raise TypeError(
