@@ -49,7 +49,7 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
         form_key: str | None = None,
     ) -> None:
         if not isinstance(nplike, (ak._nplikes.numpy.Numpy, ak._nplikes.cupy.Cupy)):
-            raise ValueError(
+            raise TypeError(
                 f"Only numpy and cupy nplikes are supported for VirtualArray. Received {type(nplike)}"
             )
 
@@ -142,6 +142,10 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
     def view(self, dtype: DTypeLike) -> Self:
         # TODO: Should views return a view of the underlying NDArray if it's materialized?
         dtype = np.dtype(dtype)
+
+        if self.is_materialized:
+            return self.materialize().view(dtype)
+
         if len(self._shape) >= 1:
             last, remainder = divmod(
                 self._shape[-1] * self._dtype.itemsize, dtype.itemsize
@@ -272,17 +276,4 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
     def __iter__(self):
         array = self.materialize()
         return iter(array)
-
-    def __dlpack_device__(self) -> tuple[int, int]:
-        array = self.materialize()
-        maybe_func = getattr(array, "__dlpack_device__", None)
-        if maybe_func is None:
-            raise AttributeError(f"'{type(array)}' object has no attribute '__dlpack_device__'")
-        return maybe_func()
-
-    def __dlpack__(self, stream: Any = None) -> Any:
-        array = self.materialize()
-        maybe_func = getattr(array, "__dlpack__", None)
-        if maybe_func is None:
-            raise AttributeError(f"'{type(array)}' object has no attribute '__dlpack__'")
-        return maybe_func(stream=stream)
+        return iter(array)
