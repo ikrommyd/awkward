@@ -50,8 +50,13 @@ class Numpy(ArrayModuleNumpyLike["NDArray"]):
 
     def is_c_contiguous(self, x: NDArray | PlaceholderArray) -> bool:
         # TODO: What should this do for virtual arrays?
-        if isinstance(x, (PlaceholderArray, VirtualArray)):
+        if isinstance(x, PlaceholderArray):
             return True
+        if isinstance(x, VirtualArray):
+            if x.is_materialized:
+                return x.materialize().flags["C_CONTIGUOUS"]
+            else:
+                return True
         else:
             return x.flags["C_CONTIGUOUS"]  # type: ignore[attr-defined]
 

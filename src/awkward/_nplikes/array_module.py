@@ -78,9 +78,10 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLikeT]):
         self, x: ArrayLikeT | PlaceholderArray | VirtualArray
     ) -> ArrayLikeT | PlaceholderArray | VirtualArray:
         # TODO: Should this materialize virtual arrays?
-        if isinstance(x, (PlaceholderArray, VirtualArray)):
+        if isinstance(x, PlaceholderArray):
             return x
         else:
+            (x,) = materialize_if_virtual(x)
             return self._module.ascontiguousarray(x)
 
     def frombuffer(

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import awkward as ak
 from awkward._dispatch import high_level_function
 from awkward._layout import HighLevelContext
 from awkward._nplikes.numpy_like import NumpyMetadata
@@ -81,6 +82,10 @@ def to_packed(array, *, highlevel=True, behavior=None, attrs=None):
 
 def _impl(array, highlevel, behavior, attrs):
     with HighLevelContext(behavior=behavior, attrs=attrs) as ctx:
-        layout = ctx.unwrap(array, allow_record=True, primitive_policy="error")
+        layout = ctx.unwrap(
+            ak.operations.materialize(array),
+            allow_record=True,
+            primitive_policy="error",
+        )
     out = layout.to_packed()
     return ctx.wrap(out, highlevel=highlevel)
