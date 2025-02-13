@@ -48,6 +48,11 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
         generator: Callable[[], ArrayLike],
         form_key: str | None = None,
     ) -> None:
+        if not isinstance(nplike, (ak._nplikes.numpy.Numpy, ak._nplikes.cupy.Cupy)):
+            raise ValueError(
+                f"Only numpy and cupy nplikes are supported for VirtualArray. Received {type(nplike)}"
+            )
+
         # array metadata
         self._nplike = nplike
         self._shape = shape
