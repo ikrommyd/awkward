@@ -276,4 +276,3 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
     def __iter__(self):
         array = self.materialize()
         return iter(array)
-        return iter(array)
