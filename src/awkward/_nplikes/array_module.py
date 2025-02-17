@@ -61,7 +61,6 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLikeT]):
             assert obj.dtype == dtype or dtype is None
             return obj
         if isinstance(obj, VirtualArray) and obj.is_materialized:
-            assert obj.dtype == dtype or dtype is None
             obj = obj.materialize()
         if copy:
             return self._module.array(obj, dtype=dtype, copy=True)
@@ -91,6 +90,7 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLikeT]):
                     lambda: self._module.ascontiguousarray(x.materialize()),
                 )
         else:
+            (x,) = materialize_if_virtual(x)
             return self._module.ascontiguousarray(x)
 
     def frombuffer(

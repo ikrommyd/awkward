@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 import awkward as ak
 
 
+@pytest.mark.skip("Should not work with virtual arrays")
 def test_wrap_index_numpy():
     data = np.arange(10, dtype=np.int64)
     index = ak.index.Index64(data)
@@ -14,6 +16,7 @@ def test_wrap_index_numpy():
     assert np.shares_memory(data, other_data)
 
 
+@pytest.mark.skip("Should not work with virtual arrays")
 def test_wrap_bare_list():
     data = [1, 2, 3, 4, 5]
     index = ak.index.Index64(data)

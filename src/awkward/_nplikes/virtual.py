@@ -53,6 +53,32 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
         self._generator = generator
         self._form_key = form_key
 
+    def tobytes(self, order="C") -> bytes:
+        return self.materialize().tobytes(order)
+
+    def tostring(self, order="C") -> bytes:
+        return self.materialize().tostring(order)
+
+    @property
+    def real(self):
+        return self.materialize().real
+
+    @property
+    def imag(self):
+        return self.materialize().imag
+
+    def max(self, axis=None, out=None, keepdims=False):
+        return self.materialize().max(axis, out, keepdims)
+
+    def min(self, axis=None, out=None, keepdims=False):
+        return self.materialize().min(axis, out, keepdims)
+
+    def argsort(self, axis=-1, kind=None, order=None, *, stable=None):
+        return self.materialize().argsort(axis, kind, order, stable=stable)
+
+    def byteswap(self, inplace=False):
+        return self.materialize().byteswap(inplace)
+
     @property
     def dtype(self) -> DType:
         return self._dtype
@@ -172,11 +198,7 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
         return self.materialize().data
 
     def __array__(self, *args, **kwargs):
-        # TODO: This is used to call np/cp.asarray on the array. Should this materialize the array?
-        # Should it only work if the array is materialized?
-        raise AssertionError(
-            "The '__array__' method should never be called directly on a VirtualArray."
-        )
+        return self.materialize()
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         return self.nplike.apply_ufunc(ufunc, method, inputs, kwargs)
