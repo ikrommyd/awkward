@@ -1298,6 +1298,12 @@ class RecordArray(RecordMeta[Content], Content):
 
     def _materialize(self) -> Self:
         contents = [content.materialize() for content in self._contents]
+        # TODO: This causes tests/test_0912_packed.py::test_record_array to fail
+        if contents:
+            new_length = min(content.length for content in contents)
+        else:
+            new_length = self._length
+        self._length = new_length
         return RecordArray(
             contents,
             self._fields,

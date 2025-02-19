@@ -539,8 +539,13 @@ class Content(Meta):
 
         elif isinstance(where, slice) and where.step is None:
             # Ensure that start, stop are non-negative!
+            length = (
+                self.shape[0]
+                if isinstance(self, ak.contents.NumpyArray)
+                else self.length
+            )
             start, stop, _, _ = self._backend.index_nplike.derive_slice_for_length(
-                normalize_slice(where, nplike=self._backend.index_nplike), self.length
+                normalize_slice(where, nplike=self._backend.index_nplike), length
             )
             return self._getitem_range(start, stop)
 

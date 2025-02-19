@@ -11,7 +11,7 @@ from awkward._nplikes.dispatch import nplike_of_obj
 from awkward._nplikes.jax import Jax
 from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import NumpyLike, NumpyMetadata
-from awkward._nplikes.shape import ShapeItem
+from awkward._nplikes.shape import ShapeItem, unknown_length
 from awkward._nplikes.typetracer import TypeTracer
 from awkward._nplikes.virtual import VirtualArray
 from awkward._slicing import normalize_slice
@@ -149,6 +149,11 @@ class Index:
 
     @property
     def length(self) -> ShapeItem:
+        if (
+            isinstance(self._data, VirtualArray)
+            and self._data.shape[0] is unknown_length
+        ):
+            self._data.materialize()
         return self._data.shape[0]
 
     def forget_length(self) -> Self:

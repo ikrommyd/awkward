@@ -242,6 +242,11 @@ class NumpyArray(NumpyMeta, Content):
 
     @property
     def length(self) -> ShapeItem:
+        if (
+            isinstance(self._data, VirtualArray)
+            and self._data.shape[0] is unknown_length
+        ):
+            self._data.materialize()
         return self._data.shape[0]
 
     def __repr__(self):

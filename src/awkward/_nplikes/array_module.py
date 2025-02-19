@@ -17,12 +17,43 @@ from awkward._nplikes.numpy_like import (
 from awkward._nplikes.placeholder import PlaceholderArray
 from awkward._nplikes.shape import ShapeItem, unknown_length
 from awkward._nplikes.virtual import VirtualArray, materialize_if_virtual
-from awkward._typing import TYPE_CHECKING, Any, DType, Final, Literal, TypeVar, cast
+from awkward._typing import (
+    TYPE_CHECKING,
+    Any,
+    DType,
+    Final,
+    Literal,
+    TypeGuard,
+    TypeVar,
+    cast,
+)
 
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike
 
 np = NumpyMetadata.instance()
+
+
+def is_unknown_length(array: Any) -> bool:
+    return array is unknown_length
+
+
+def is_unknown_scalar(array: Any) -> TypeGuard[VirtualArray]:
+    if isinstance(array, VirtualArray):
+        return array.ndim == 0 and not array.is_materialized
+    return False
+
+
+def is_unknown_integer(array: Any) -> TypeGuard[VirtualArray]:
+    return cast(
+        bool, is_unknown_scalar(array) and np.issubdtype(array.dtype, np.integer)
+    )
+
+
+def is_unknown_array(array: Any) -> TypeGuard[VirtualArray]:
+    if isinstance(array, VirtualArray):
+        return array.ndim > 0 and array.shape[0] is unknown_length
+    return False
 
 
 @lru_cache
@@ -81,7 +112,7 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLikeT]):
         if isinstance(x, PlaceholderArray):
             return x
         elif isinstance(x, VirtualArray):
-            if x.is_materialized:
+            if x.is_materialized or x.shape[0] is unknown_length:
                 return self._module.ascontiguousarray(x.materialize())
             else:
                 return VirtualArray(
@@ -346,7 +377,7 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLikeT]):
             next_shape = self._compute_compatible_shape(shape, x.shape)
             return PlaceholderArray(self, next_shape, x.dtype, x._field_path)
         if isinstance(x, VirtualArray):
-            if not x.is_materialized:
+            if not x.is_materialized and x.shape[0] is not unknown_length:
                 next_shape = self._compute_compatible_shape(shape, x.shape)
                 return VirtualArray(
                     self,
@@ -355,7 +386,7 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLikeT]):
                     lambda: self.reshape(x.materialize(), next_shape),
                 )
             else:
-                x = x._array
+                x = x.materialize()
 
         if copy is None:
             return self._module.reshape(x, shape)
@@ -369,16 +400,21 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLikeT]):
                 raise ValueError("cannot reshape array without copying") from None
             return result
 
-    def shape_item_as_index(self, x1: ShapeItem) -> int:
+    def shape_item_as_index(self, x1: ShapeItem) -> IndexType:
         if x1 is unknown_length:
-            raise TypeError("array module nplikes do not support unknown lengths")
+            import sys
+
+            return sys.maxsize
         elif isinstance(x1, int):
             return x1
         else:
             raise TypeError(f"expected None or int type, received {x1}")
 
-    def index_as_shape_item(self, x1: IndexType) -> int:
-        return int(x1)
+    def index_as_shape_item(self, x1: IndexType) -> ShapeItem:
+        if is_unknown_scalar(x1) and np.issubdtype(x1.dtype, np.integer):
+            return unknown_length
+        else:
+            return int(x1)
 
     def derive_slice_for_length(
         self, slice_: slice, length: ShapeItem
@@ -388,28 +424,69 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLikeT]):
             slice_: normalized slice object
             length: length of layout
 
-        Return a tuple of (start, stop, step) indices into a layout, suitable for
+        Return a tuple of (start, stop, step, length) indices into a layout, suitable for
         `_getitem_range` (if step == 1). Normalize lengths to fit length of array,
         and for arrays with unknown lengths, these offsets become none.
         """
-        # We have known_data (therefore known shape), so we can safely convert to int
-        slice_as_shape = slice(
-            slice_.start
-            if slice_.start is None
-            else self.index_as_shape_item(slice_.start),
-            slice_.stop
-            if slice_.stop is None
-            else self.index_as_shape_item(slice_.stop),
-            slice_.step
-            if slice_.step is None
-            else self.index_as_shape_item(slice_.step),
-        )
-        start, stop, step = slice_as_shape.indices(length)
-        slice_length = math.ceil((stop - start) / step)
+        start = slice_.start
+        stop = slice_.stop
+        step = slice_.step
 
-        # Shape items are already valid indices, so we don't need to invoke
-        # `shape_item_as_index`
-        return start, stop, step, slice_length
+        # Unknown lengths mean that the slice index is unknown
+        length_scalar = self.shape_item_as_index(length)
+        if length is unknown_length:
+            return start, stop, step, length
+        else:
+            # Normalise `None` values
+            if step is None:
+                step = 1
+
+            if start is None:
+                # `step` is unknown → `start` is unknown
+                if is_unknown_scalar(step):
+                    start = step
+                elif step < 0:
+                    start = length_scalar - 1
+                else:
+                    start = 0
+            # Normalise negative integers
+            elif not is_unknown_scalar(start):
+                if start < 0:
+                    start = start + length_scalar
+                # Clamp values into length bounds
+                if is_unknown_scalar(length_scalar):
+                    start = length_scalar
+                else:
+                    start = min(max(start, 0), length_scalar)
+
+            if stop is None:
+                # `step` is unknown → `stop` is unknown
+                if is_unknown_scalar(step):
+                    stop = step
+                elif step < 0:
+                    stop = -1
+                else:
+                    stop = length_scalar
+            # Normalise negative integers
+            elif not is_unknown_scalar(stop):
+                if stop < 0:
+                    stop = stop + length_scalar
+                # Clamp values into length bounds
+                if is_unknown_scalar(length_scalar):
+                    stop = length_scalar
+                else:
+                    stop = min(max(stop, 0), length_scalar)
+
+            # Compute the length of the slice for downstream use
+            slice_length, remainder = divmod((stop - start), step)
+            if not is_unknown_scalar(slice_length):
+                # Take ceiling of division
+                if remainder != 0:
+                    slice_length += 1
+
+                slice_length = max(0, slice_length)
+
+            return start, stop, step, self.index_as_shape_item(slice_length)
 
     def regularize_index_for_length(
         self, index: IndexType, length: ShapeItem
@@ -420,7 +497,16 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLikeT]):
             length: length of array
 
         Returns regularized index that is guaranteed to be in-bounds.
-        """  # We have known length and index
+        """
+        if is_unknown_scalar(index):
+            return index
+
+        # Without a known length the result must be unknown, as we cannot regularize the index
+        length_scalar = self.shape_item_as_index(length)
+        if length is unknown_length:
+            return length_scalar
+
+        # We have known length and index
         length = cast(int, length)
 
         if index < 0:

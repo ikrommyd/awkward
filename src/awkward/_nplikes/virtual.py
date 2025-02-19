@@ -85,10 +85,11 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
     def materialize(self) -> ArrayLike:
         if self._array is UNMATERIALIZED:
             array = cast(ArrayLike, self._nplike.asarray(self.generator()))
-            if self._shape[0] is not unknown_length:
-                assert self._shape == array.shape, (
-                    f"the array had shape {self._shape} before materialization while the materialized array has shape {array.shape}"
-                )
+            if self.ndim > 0:
+                if self._shape[0] is not unknown_length:
+                    assert self._shape == array.shape, (
+                        f"the array had shape {self._shape} before materialization while the materialized array has shape {array.shape}"
+                    )
             self._shape = array.shape
             self._array = array
         return cast(ArrayLike, self._array)
@@ -245,7 +246,10 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
         raise TypeError("Only scalar arrays can be used as an index.")
 
     def __len__(self) -> int:
-        return int(self._shape[0])
+        if self.ndim > 0:
+            return int(self._shape[0])
+        else:
+            raise TypeError("len() of unsized object")
 
     def __iter__(self):
         array = self.materialize()
