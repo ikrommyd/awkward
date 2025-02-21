@@ -77,7 +77,6 @@ class Index:
                 data.shape,
                 data.dtype,
                 lambda: data,
-                getattr(data, "form_key", None),
             )
             self._data.materialize()
         else:
