@@ -14,7 +14,7 @@ from awkward._nplikes.numpy_like import NumpyLike, NumpyMetadata
 from awkward._nplikes.placeholder import PlaceholderArray
 from awkward._nplikes.shape import ShapeItem
 from awkward._nplikes.typetracer import TypeTracer, TypeTracerArray
-from awkward._nplikes.virtual import VirtualArray
+from awkward._nplikes.virtual import VirtualArray, materialize_if_virtual
 from awkward._slicing import normalize_slice
 from awkward._typing import Any, DType, Final, Self, cast
 
@@ -181,11 +181,7 @@ class Index:
         return to_nplike(self.data, nplike, from_nplike=self._nplike)
 
     def materialize(self) -> Index:
-        buffer = self._data
-        if isinstance(buffer, VirtualArray):
-            out = buffer.materialize()
-        else:
-            out = buffer
+        (out,) = materialize_if_virtual(self._data)
         return Index(out, metadata=self.metadata, nplike=self._nplike)
 
     @property

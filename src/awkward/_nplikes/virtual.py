@@ -10,7 +10,7 @@ from awkward._nplikes.array_like import ArrayLike
 from awkward._nplikes.numpy_like import NumpyLike, NumpyMetadata
 from awkward._nplikes.shape import ShapeItem, unknown_length
 from awkward._operators import NDArrayOperatorsMixin
-from awkward._typing import TYPE_CHECKING, Any, Callable, DType, Self, cast
+from awkward._typing import TYPE_CHECKING, Any, Callable, DType, Self
 from awkward._util import Sentinel
 
 np = NumpyMetadata.instance()
@@ -38,15 +38,14 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
         shape: tuple[ShapeItem, ...],
         dtype: DType,
         generator: Callable[[], ArrayLike],
-        form_key: str | None = None,
     ) -> None:
         if not isinstance(nplike, (ak._nplikes.numpy.Numpy, ak._nplikes.cupy.Cupy)):
             raise TypeError(
                 f"Only numpy and cupy nplikes are supported for {type(self).__name__}. Received {type(nplike)}"
             )
-        if any(dim is unknown_length for dim in shape):
+        if any(not isinstance(item, int) for item in shape):
             raise TypeError(
-                f"{type(self).__name__} does not support unknown_length in its shape. Received shape {shape}."
+                f"{type(self).__name__} supports only shapes of integer dimensions. Received shape {shape}."
             )
 
         # array metadata
@@ -55,7 +54,6 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
         self._dtype = np.dtype(dtype)
         self._array: Sentinel | ArrayLike = UNMATERIALIZED
         self._generator = generator
-        self._form_key = form_key
 
     def tobytes(self, order="C") -> bytes:
         return self.materialize().tobytes(order)
@@ -102,25 +100,24 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
     @property
     def nbytes(self) -> ShapeItem:
         if self.is_materialized:
-            return cast(ArrayLike, self._array).nbytes
+            return self._array.nbytes  # type: ignore[union-attr]
         return 0
 
     @property
     def strides(self) -> tuple[ShapeItem, ...]:
-        out: tuple[ShapeItem, ...] = (self._dtype.itemsize,)
-        for item in reversed(self._shape):
-            out = (item * out[0], *out)
-        return out
+        return self.materialize().strides  # type: ignore[attr-defined]
 
     def materialize(self) -> ArrayLike:
         if self._array is UNMATERIALIZED:
-            array = cast(ArrayLike, self._nplike.asarray(self.generator()))
+            array = self._nplike.asarray(self.generator())
             assert self._shape == array.shape, (
                 f"{type(self).__name__} had shape {self._shape} before materialization while the materialized array has shape {array.shape}"
             )
-            self._shape = array.shape
+            assert self._dtype == array.dtype, (
+                f"{type(self).__name__} had dtype {self._dtype} before materialization while the materialized array has dtype {array.dtype}"
+            )
             self._array = array
-        return cast(ArrayLike, self._array)
+        return self._array  # type: ignore[return-value]
 
     @property
     def is_materialized(self) -> bool:
@@ -136,7 +133,6 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
             self._shape[::-1],
             self._dtype,
             lambda: self.materialize().T,
-            self._form_key,
         )
 
     def view(self, dtype: DTypeLike) -> Self:
@@ -162,7 +158,6 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
             shape,
             dtype,
             lambda: self.materialize().view(dtype),
-            self._form_key,
         )
 
     @property
@@ -170,22 +165,24 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
         return self._generator
 
     @property
-    def form_key(self) -> str | None:
-        return self._form_key
-
-    @form_key.setter
-    def form_key(self, value: str | None):
-        if value is not None and not isinstance(value, str):
-            raise TypeError("form_key must be None or a string")
-        self._form_key = value
-
-    @property
     def nplike(self) -> NumpyLike:
+        if not isinstance(
+            self._nplike, (ak._nplikes.numpy.Numpy, ak._nplikes.cupy.Cupy)
+        ):
+            raise TypeError(
+                f"Only numpy and cupy nplikes are supported for {type(self).__name__}. Received {type(self._nplike)}"
+            )
         return self._nplike
 
     def copy(self) -> VirtualArray:
-        self.materialize()
-        return self
+        new_virtual = type(self)(
+            self._nplike,
+            self._shape,
+            self._dtype,
+            lambda: self.materialize().copy(),  # type: ignore[attr-defined]
+        )
+        new_virtual.materialize()
+        return new_virtual
 
     def tolist(self) -> list:
         return self.materialize().tolist()
@@ -244,7 +241,6 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
                 (new_length,),
                 self._dtype,
                 lambda: self.materialize()[index],
-                self._form_key,
             )
         else:
             return self.materialize().__getitem__(index)
@@ -278,6 +274,7 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
 
     # TODO: The following can be implemented, but they will need materialization.
     # Also older numpy versions don't support them.
+    # One needs them to use from_dlpack() on a virtual array.
     def __dlpack_device__(self) -> tuple[int, int]:
         raise RuntimeError("cannot realise an unknown value")
 
