@@ -543,8 +543,8 @@ class UnionArray(UnionMeta[Content], Content):
         return self._getitem_range(0, 0)
 
     def _is_getitem_at_placeholder(self) -> bool:
-        is_placeholder_tags = isinstance(self._tags, PlaceholderArray)
-        is_placeholder_index = isinstance(self._index, PlaceholderArray)
+        is_placeholder_tags = isinstance(self._tags.data, PlaceholderArray)
+        is_placeholder_index = isinstance(self._index.data, PlaceholderArray)
         is_placeholder = is_placeholder_tags or is_placeholder_index
         if is_placeholder:
             return True
@@ -555,10 +555,12 @@ class UnionArray(UnionMeta[Content], Content):
 
     def _is_getitem_at_virtual(self) -> bool:
         is_virtual_tags = (
-            isinstance(self._tags, VirtualArray) and not self._tags.is_materialized
+            isinstance(self._tags.data, VirtualArray)
+            and not self._tags.data.is_materialized
         )
         is_virtual_index = (
-            isinstance(self._index, VirtualArray) and not self._index.is_materialized
+            isinstance(self._index.data, VirtualArray)
+            and not self._index.data.is_materialized
         )
         is_virtual = is_virtual_tags or is_virtual_index
         if is_virtual:
@@ -1732,11 +1734,19 @@ class UnionArray(UnionMeta[Content], Content):
         )
 
     @property
-    def _is_materialized(self) -> bool:
+    def _is_all_materialized(self) -> bool:
         return (
-            self._tags.is_materialized
-            and self._index.is_materialized
-            and all(content.is_materialized for content in self._contents)
+            self._tags.is_all_materialized
+            and self._index.is_all_materialized
+            and all(content.is_all_materialized for content in self._contents)
+        )
+
+    @property
+    def _is_any_materialized(self) -> bool:
+        return (
+            self._tags.is_any_materialized
+            or self._index.is_any_materialized
+            or any(content.is_any_materialized for content in self._contents)
         )
 
     def _is_equal_to(
