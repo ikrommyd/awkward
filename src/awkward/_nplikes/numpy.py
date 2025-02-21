@@ -52,11 +52,6 @@ class Numpy(ArrayModuleNumpyLike):
     def is_c_contiguous(self, x: ArrayLike) -> bool:
         if isinstance(x, PlaceholderArray):
             return True
-        if isinstance(x, VirtualArray):
-            if x.is_materialized:
-                return x.materialize().flags["C_CONTIGUOUS"]
-            else:
-                return True
         else:
             (x,) = materialize_if_virtual(x)
             return x.flags["C_CONTIGUOUS"]  # type: ignore[attr-defined]
