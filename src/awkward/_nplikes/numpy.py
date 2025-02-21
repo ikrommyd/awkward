@@ -9,7 +9,7 @@ from awkward._nplikes.array_module import ArrayModuleNumpyLike
 from awkward._nplikes.dispatch import register_nplike
 from awkward._nplikes.numpy_like import NumpyMetadata
 from awkward._nplikes.placeholder import PlaceholderArray
-from awkward._nplikes.virtual import VirtualArray, materialize_if_virtual
+from awkward._nplikes.virtual import materialize_if_virtual
 from awkward._typing import TYPE_CHECKING, Final, Literal
 
 if TYPE_CHECKING:
@@ -47,8 +47,7 @@ class Numpy(ArrayModuleNumpyLike):
         Return `True` if the given object is a numpy buffer, otherwise `False`.
 
         """
-        # TODO: What should this do for VirtualArray?
-        return issubclass(type_, (numpy.ndarray, VirtualArray))
+        return issubclass(type_, numpy.ndarray)
 
     def is_c_contiguous(self, x: ArrayLike) -> bool:
         if isinstance(x, PlaceholderArray):

@@ -48,8 +48,10 @@ class Cupy(ArrayModuleNumpyLike):
     def frombuffer(
         self, buffer, *, dtype: DTypeLike | None = None, count: ShapeItem = -1
     ) -> ArrayLike:
-        assert not isinstance(buffer, (PlaceholderArray, VirtualArray))
-        assert not isinstance(count, (PlaceholderArray, VirtualArray))
+        if isinstance(buffer, PlaceholderArray):
+            raise TypeError("placeholder arrays are not supported in `frombuffer`")
+        if isinstance(buffer, VirtualArray):
+            raise TypeError("virtual arrays are not supported in `frombuffer`")
         np_array = numpy.frombuffer(buffer, dtype=dtype, count=count)
         return self._module.asarray(np_array)
 
@@ -170,9 +172,8 @@ class Cupy(ArrayModuleNumpyLike):
         Return `True` if the given object is a cupy buffer, otherwise `False`.
 
         """
-        # TODO: What should this do for virtual arrays
         module, _, suffix = type_.__module__.partition(".")
-        return module == "cupy" or suffix == "_nplikes.virtual"
+        return module == "cupy"
 
     def is_c_contiguous(self, x: ArrayLike) -> bool:
         if isinstance(x, PlaceholderArray):
