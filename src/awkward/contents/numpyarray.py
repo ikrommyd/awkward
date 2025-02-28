@@ -120,6 +120,8 @@ class NumpyArray(NumpyMeta, Content):
         if backend is None:
             backend = backend_of_obj(data, default=NumpyBackend.instance())
 
+        if isinstance(data, VirtualArray):
+            data = data.materialize()
         data = backend.nplike.asarray(data)
         if make_virtual and not isinstance(
             data, (VirtualArray, PlaceholderArray, TypeTracerArray)
@@ -130,7 +132,6 @@ class NumpyArray(NumpyMeta, Content):
                 data.dtype,
                 lambda: data,
             )
-            self._data.materialize()
         else:
             self._data = data
 
