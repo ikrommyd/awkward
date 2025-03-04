@@ -148,12 +148,10 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLike]):
         *,
         dtype: DTypeLike | None = None,
     ) -> ArrayLike:
-        if isinstance(x, PlaceholderArray) or (
-            isinstance(x, VirtualArray) and not x.is_materialized
-        ):
+        if isinstance(x, (PlaceholderArray, VirtualArray)):
             return self.zeros(x.shape, dtype=dtype or x.dtype)
         else:
-            return self._module.zeros_like(*materialize_if_virtual(x), dtype=dtype)
+            return self._module.zeros_like(x, dtype=dtype)
 
     def ones_like(
         self,
@@ -161,12 +159,10 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLike]):
         *,
         dtype: DTypeLike | None = None,
     ) -> ArrayLike:
-        if isinstance(x, PlaceholderArray) or (
-            isinstance(x, VirtualArray) and not x.is_materialized
-        ):
+        if isinstance(x, (PlaceholderArray, VirtualArray)):
             return self.ones(x.shape, dtype=dtype or x.dtype)
         else:
-            return self._module.ones_like(*materialize_if_virtual(x), dtype=dtype)
+            return self._module.ones_like(x, dtype=dtype)
 
     def full_like(
         self,
@@ -175,13 +171,11 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLike]):
         *,
         dtype: DTypeLike | None = None,
     ) -> ArrayLike:
-        if isinstance(x, PlaceholderArray) or (
-            isinstance(x, VirtualArray) and not x.is_materialized
-        ):
+        if isinstance(x, (PlaceholderArray, VirtualArray)):
             return self.full(x.shape, fill_value, dtype=dtype or x.dtype)
         else:
             return self._module.full_like(
-                *materialize_if_virtual(x), self._module.array(fill_value), dtype=dtype
+                x, self._module.array(fill_value), dtype=dtype
             )
 
     def arange(
@@ -762,7 +756,7 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLike]):
         suppress_small: bool | None = None,
     ):
         if isinstance(x, PlaceholderArray):
-            return "[XX ... XX]"
+            return "[?? ... ??]"
         if isinstance(x, VirtualArray) and not x.is_materialized:
             return "[?? ... ??]"
         (x,) = materialize_if_virtual(x)
