@@ -99,6 +99,7 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLikeT]):
                     lambda: self._module.ascontiguousarray(x.materialize()),
                 )
         else:
+            (x,) = materialize_if_virtual(x)
             return self._module.ascontiguousarray(x)
 
     def frombuffer(

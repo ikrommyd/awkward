@@ -11,8 +11,9 @@ from awkward._nplikes.dispatch import nplike_of_obj
 from awkward._nplikes.jax import Jax
 from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import NumpyLike, NumpyMetadata
+from awkward._nplikes.placeholder import PlaceholderArray
 from awkward._nplikes.shape import ShapeItem
-from awkward._nplikes.typetracer import TypeTracer
+from awkward._nplikes.typetracer import TypeTracer, TypeTracerArray
 from awkward._nplikes.virtual import VirtualArray, materialize_if_virtual
 from awkward._slicing import normalize_slice
 from awkward._typing import Any, DType, Final, Self, cast
@@ -49,6 +50,7 @@ class Index:
         *,
         metadata: dict | None = None,
         nplike: NumpyLike | None = None,
+        make_virtual=True,
     ):
         assert not isinstance(data, Index)
         if nplike is None:
@@ -61,11 +63,24 @@ class Index:
         if metadata is not None and not isinstance(metadata, dict):
             raise TypeError("Index metadata must be None or a dict")
         self._metadata = metadata
+
         # We don't care about F, C (it's one dimensional), but we do need
         # the array to be contiguous. This should _not_ return a copy if already
-        self._data = self._nplike.ascontiguousarray(
+        data = self._nplike.ascontiguousarray(
             self._nplike.asarray(data, dtype=self._expected_dtype)
         )
+        if make_virtual and not isinstance(
+            data, (VirtualArray, PlaceholderArray, TypeTracerArray)
+        ):
+            self._data = VirtualArray(
+                self._nplike,
+                data.shape,
+                data.dtype,
+                lambda: data,
+            )
+            self._data.materialize()
+        else:
+            self._data = data
 
         if len(self._data.shape) != 1:
             raise TypeError("Index data must be one-dimensional")
