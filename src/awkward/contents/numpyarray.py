@@ -205,7 +205,12 @@ class NumpyArray(NumpyMeta, Content):
         return self._data.dtype
 
     def _raw(self, nplike=None):
-        return to_nplike(self.data, nplike, from_nplike=self._backend.nplike)
+        data = (
+            self._data.materialize()
+            if isinstance(self._data, VirtualArray)
+            else self._data
+        )
+        return to_nplike(data, nplike, from_nplike=self._backend.nplike)
 
     def _form_with_key(self, getkey: Callable[[Content], str | None]) -> NumpyForm:
         return self.form_cls(
@@ -1227,8 +1232,6 @@ class NumpyArray(NumpyMeta, Content):
             )
 
         nparray = self._raw(numpy)
-        if isinstance(nparray, VirtualArray):
-            nparray = nparray.materialize()
         storage_type = pyarrow.from_numpy_dtype(nparray.dtype)
 
         if issubclass(nparray.dtype.type, (bool, np.bool_)):
