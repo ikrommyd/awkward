@@ -117,6 +117,9 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
             self._array = array
         return self._array  # type: ignore[return-value]
 
+    def unmaterialize(self) -> None:
+        self._array = UNMATERIALIZED
+
     @property
     def is_materialized(self) -> bool:
         return self._array is not UNMATERIALIZED
@@ -176,7 +179,7 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
         return copy.copy(self)
 
     def tolist(self) -> list:
-        return self.materialize().tolist()
+        return self.materialize().tolist()  # type: ignore[attr-defined]
 
     @property
     def ctypes(self):
@@ -289,11 +292,8 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
         array = self.materialize()
         return iter(array)
 
-    # TODO: The following can be implemented, but they will need materialization.
-    # Also older numpy versions don't support them.
-    # One needs them to use from_dlpack() on a virtual array.
     def __dlpack_device__(self) -> tuple[int, int]:
-        raise RuntimeError("cannot realise an unknown value")
+        return self.materialize().__dlpack_device__()  # type: ignore[attr-defined]
 
     def __dlpack__(self, stream: Any = None) -> Any:
-        raise RuntimeError("cannot realise an unknown value")
+        return self.materialize().__dlpack__(stream=stream)  # type: ignore[attr-defined]
