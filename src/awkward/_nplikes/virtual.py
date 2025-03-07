@@ -92,9 +92,6 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
     def argsort(self, axis=-1, kind=None, order=None, *, stable=None):
         return self.materialize().argsort(axis, kind, order, stable=stable)
 
-    def byteswap(self, inplace=False):
-        return self.materialize().byteswap(inplace)
-
     @property
     def dtype(self) -> DType:
         return self._dtype
@@ -203,6 +200,17 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
 
     def __array__(self, *args, **kwargs):
         return self.materialize().__array__(*args, **kwargs)
+
+    def byteswap(self, inplace=False):
+        if self._array is not UNMATERIALIZED:
+            return self._array.byteswap(inplace=inplace)
+
+        return type(self)(
+            self._nplike,
+            self._shape,
+            self._dtype,
+            lambda: self.materialize().byteswap(inplace=inplace),
+        )
 
     def __copy__(self) -> VirtualArray:
         new_virtual = type(self)(
