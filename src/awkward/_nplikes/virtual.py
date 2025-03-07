@@ -209,8 +209,16 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
     def data(self):
         return self.materialize().data
 
-    def __array__(self, *args, **kwargs):
-        return self.materialize().__array__(*args, **kwargs)
+    def byteswap(self, inplace=False):
+        if self._array is not UNMATERIALIZED:
+            return self._array.byteswap(inplace=inplace)
+
+        return type(self)(
+            self._nplike,
+            self._shape,
+            self._dtype,
+            lambda: self.materialize().byteswap(inplace=inplace),
+        )
 
     def __copy__(self) -> VirtualArray:
         new_virtual = type(self)(
