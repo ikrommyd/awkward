@@ -131,17 +131,23 @@ class NumpyLike(PublicSingleton, Protocol[ArrayLikeT]):
 
     @property
     @abstractmethod
+    def supports_virtual_arrays(self) -> bool: ...
+
+    @property
+    @abstractmethod
     def known_data(self) -> bool: ...
 
     @property
     @abstractmethod
     def is_eager(self) -> bool: ...
 
-    ############################ array creation
+    ############################ ndarray property that all the nplikes have
 
     @property
     @abstractmethod
     def ndarray(self) -> ArrayLikeT: ...
+
+    ############################ array creation
 
     @abstractmethod
     def asarray(
