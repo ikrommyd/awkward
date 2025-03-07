@@ -34,6 +34,18 @@ def materialize_if_virtual(*args: Any) -> tuple[Any, ...]:
 
 
 class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
+    """
+    Implements a virtual array to be used as a buffer inside layouts.
+    Virtual arrays are tied to specific nplikes and only numpy and cupy nplikes are allowed.
+    Therefore, virtual arrays are only allowed to generate `numpy.ndarray`s or `cupy.ndarray`s when materialized.
+    The arrays are generated via a generator function that is passed to the constructor.
+    All virtual arrays also required to have a known dtype and shape and `unknown_length` is not currently allowed in the shape.
+    Some operations (such as trivial slicing) maintain virtualness and return a new virtual array.
+    Others are required to access the underlying data of the array and therefore materialize it.
+    The materialized arrays are cached on themselves in the `_array` property.
+    Subsequent virtual arrays that originate from some virtual array will hit the cache of their parents if there is any.
+    """
+
     def __init__(
         self,
         nplike: NumpyLike,
@@ -41,13 +53,13 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
         dtype: DTypeLike,
         generator: Callable[[], ArrayLike],
     ) -> None:
-        if not isinstance(nplike, (ak._nplikes.numpy.Numpy, ak._nplikes.cupy.Cupy)):
+        if not nplike.supports_virtual_arrays:
             raise TypeError(
                 f"Only numpy and cupy nplikes are supported for {type(self).__name__}. Received {type(nplike)}"
             )
         if any(not is_integer(dim) for dim in shape):
             raise TypeError(
-                f"{type(self).__name__} supports only shapes of integer dimensions. Received shape {shape}."
+                f"Only shapes of integer dimensions are supported for {type(self).__name__}. Received shape {shape}."
             )
 
         # array metadata
@@ -103,7 +115,7 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
 
     @property
     def nbytes(self) -> ShapeItem:
-        if self.is_materialized:
+        if self._array is not UNMATERIALIZED:
             return self._array.nbytes  # type: ignore[union-attr]
         return 0
 
@@ -134,7 +146,7 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
 
     @property
     def T(self):
-        if self.is_materialized:
+        if self._array is not UNMATERIALIZED:
             return self._array.T
 
         return type(self)(
@@ -147,7 +159,7 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
     def view(self, dtype: DTypeLike) -> Self:
         dtype = np.dtype(dtype)
 
-        if self.is_materialized:
+        if self._array is not UNMATERIALIZED:
             return self.materialize().view(dtype)  # type: ignore[return-value]
 
         if len(self._shape) >= 1:
@@ -175,9 +187,7 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
 
     @property
     def nplike(self) -> NumpyLike:
-        if not isinstance(
-            self._nplike, (ak._nplikes.numpy.Numpy, ak._nplikes.cupy.Cupy)
-        ):
+        if not self._nplike.supports_virtual_arrays:
             raise TypeError(
                 f"Only numpy and cupy nplikes are supported for {type(self).__name__}. Received {type(self._nplike)}"
             )
@@ -220,7 +230,9 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
             self._generator,
         )
         new_virtual._array = (
-            copy.deepcopy(self._array, memo) if self.is_materialized else UNMATERIALIZED
+            copy.deepcopy(self._array, memo)
+            if self._array is not UNMATERIALIZED
+            else UNMATERIALIZED
         )
         return new_virtual
 
@@ -242,7 +254,7 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
             return repr(self)
 
     def __getitem__(self, index):
-        if self.is_materialized:
+        if self._array is not UNMATERIALIZED:
             return self._array.__getitem__(index)
 
         if isinstance(index, slice):
