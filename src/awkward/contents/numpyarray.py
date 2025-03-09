@@ -114,11 +114,25 @@ class NumpyArray(NumpyMeta, Content):
                     return result
     """
 
-    def __init__(self, data: ArrayLike, *, parameters=None, backend=None):
+    def __init__(
+        self, data: ArrayLike, *, parameters=None, backend=None, make_virtual=True
+    ):
         if backend is None:
             backend = backend_of_obj(data, default=NumpyBackend.instance())
 
-        self._data = backend.nplike.asarray(data)
+        data = backend.nplike.asarray(data)
+        if make_virtual and not isinstance(
+            data, (VirtualArray, PlaceholderArray, TypeTracerArray)
+        ):
+            self._data = VirtualArray(
+                backend.nplike,
+                data.shape,
+                data.dtype,
+                lambda: data,
+            )
+            self._data.materialize()
+        else:
+            self._data = data
 
         if not isinstance(backend.nplike, Jax):
             ak.types.numpytype.dtype_to_primitive(self._data.dtype)
