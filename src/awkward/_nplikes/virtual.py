@@ -67,6 +67,29 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
         self._array: Sentinel | ArrayLike = UNMATERIALIZED
         self._generator = generator
 
+    def tobytes(self, order="C") -> bytes:
+        return self.materialize().tobytes(order)
+
+    def tostring(self, order="C") -> bytes:
+        return self.materialize().tostring(order)
+
+    @property
+    def real(self):
+        return self.materialize().real
+
+    @property
+    def imag(self):
+        return self.materialize().imag
+
+    def max(self, axis=None, out=None, keepdims=False):
+        return self.materialize().max(axis, out, keepdims)
+
+    def min(self, axis=None, out=None, keepdims=False):
+        return self.materialize().min(axis, out, keepdims)
+
+    def argsort(self, axis=-1, kind=None, order=None, *, stable=None):
+        return self.materialize().argsort(axis, kind, order, stable=stable)
+
     @property
     def dtype(self) -> DType:
         return self._dtype
@@ -179,6 +202,9 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
     @property
     def data(self):
         return self.materialize().data
+
+    def __array__(self, *args, **kwargs):
+        return self.materialize().__array__(*args, **kwargs)
 
     def byteswap(self, inplace=False):
         if self._array is not UNMATERIALIZED:
