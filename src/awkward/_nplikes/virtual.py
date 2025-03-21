@@ -67,12 +67,6 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
         self._array: Sentinel | ArrayLike = UNMATERIALIZED
         self._generator = generator
 
-    def tobytes(self, order="C") -> bytes:
-        return self.materialize().tobytes(order)
-
-    def tostring(self, order="C") -> bytes:
-        return self.materialize().tostring(order)
-
     @property
     def real(self):
         return self.materialize().real
@@ -208,6 +202,9 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
             self._dtype,
             lambda: self.materialize().byteswap(inplace=inplace),
         )
+
+    def tobytes(self, order="C") -> bytes:
+        return self.materialize().tobytes(order)  # type: ignore[attr-defined]
 
     def __copy__(self) -> VirtualArray:
         new_virtual = type(self)(
