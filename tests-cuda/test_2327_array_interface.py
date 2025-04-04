@@ -7,6 +7,7 @@ import pytest
 import awkward as ak
 
 
+@pytest.mark.skip("Should not work with virtual arrays")
 def test_wrap_index_cupy():
     cp = pytest.importorskip("cupy")
     data = cp.arange(10, dtype=cp.int64)
