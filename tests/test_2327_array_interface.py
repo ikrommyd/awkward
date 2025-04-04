@@ -16,7 +16,6 @@ def test_wrap_index_numpy():
     assert np.shares_memory(data, other_data)
 
 
-@pytest.mark.skip("Should not work with virtual arrays")
 def test_wrap_bare_list():
     data = [1, 2, 3, 4, 5]
     index = ak.index.Index64(data)

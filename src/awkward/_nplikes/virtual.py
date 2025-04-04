@@ -190,7 +190,11 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
         return self.materialize().data
 
     def __array__(self, *args, **kwargs):
-        return self.materialize().__array__(*args, **kwargs)
+        array = self.materialize()
+        if isinstance(array, np.ndarray):
+            return array.__array__(*args, **kwargs)
+        else:
+            return array.get().__array__(*args, **kwargs)
 
     def byteswap(self, inplace=False):
         if self._array is not UNMATERIALIZED:

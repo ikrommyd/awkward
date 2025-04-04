@@ -292,7 +292,9 @@ class ListArray(ListMeta[Content], Content):
             if lenoffsets is not unknown_length and lenoffsets == 1:
                 offsets[0] = 0
             else:
-                offsets[:-1] = starts
+                offsets[:-1] = (
+                    starts.materialize() if isinstance(starts, VirtualArray) else starts
+                )
                 offsets[-1] = stops[-1]
             return ListOffsetArray(
                 ak.index.Index(offsets, nplike=self._backend.index_nplike),
