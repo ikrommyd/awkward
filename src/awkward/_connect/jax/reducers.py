@@ -10,6 +10,7 @@ import awkward as ak
 from awkward import _reducers
 from awkward._nplikes.numpy_like import NumpyMetadata
 from awkward._nplikes.shape import ShapeItem
+from awkward._nplikes.virtual import materialize_if_virtual
 from awkward._reducers import Reducer
 from awkward._typing import Final, Self, TypeVar
 
@@ -37,6 +38,34 @@ class JAXReducer(Reducer):
         raise NotImplementedError
 
 
+def segment_argmin(data, segment_ids, num_segments=None):
+    """
+    Applies a segmented argmin-style reduction.
+
+    Parameters:
+        data: jax.numpy.ndarray — the values to reduce.
+        segment_ids: same shape as data — indicates segment groupings.
+        num_segments: number of segments (optional).
+
+    Returns:
+        jax.numpy.ndarray — indices of min within each segment.
+    """
+    if num_segments is None:
+        num_segments = ak.max(segment_ids) + 1
+    num_segments = int(num_segments)
+
+    data = jax.numpy.asarray(data)
+    segment_ids = jax.numpy.asarray(segment_ids)
+
+    # Create a 2D array where each row corresponds to one segment
+    segmented = jax.vmap(
+        lambda i: jax.numpy.where(segment_ids == i, data, jax.numpy.inf)
+    )(jax.numpy.arange(num_segments))
+
+    # Apply the argmin along axis 1 (within each segment)
+    return jax.numpy.argmin(segmented, axis=1)
+
+
 @overloads(_reducers.ArgMin)
 class ArgMin(JAXReducer):
     name: Final = "argmin"
@@ -45,7 +74,8 @@ class ArgMin(JAXReducer):
 
     @classmethod
     def from_kernel_reducer(cls, reducer: Reducer) -> Self:
-        raise NotImplementedError
+        assert isinstance(reducer, _reducers.ArgMin)
+        return cls()
 
     @classmethod
     def _return_dtype(cls, given_dtype):
@@ -59,7 +89,39 @@ class ArgMin(JAXReducer):
         shifts: ak.index.Index | None,
         outlength: ShapeItem,
     ) -> ak.contents.NumpyArray:
-        raise NotImplementedError()
+        assert isinstance(array, ak.contents.NumpyArray)
+        result = segment_argmin(*materialize_if_virtual(array.data, parents.data))
+        result = jax.numpy.asarray(result, dtype=array.dtype)
+
+        return ak.contents.NumpyArray(result, backend=array.backend)
+
+
+def segment_argmax(data, segment_ids, num_segments=None):
+    """
+    Applies a segmented argmax-style reduction.
+
+    Parameters:
+        data: jax.numpy.ndarray — the values to reduce.
+        segment_ids: same shape as data — indicates segment groupings.
+        num_segments: number of segments (optional).
+
+    Returns:
+        jax.numpy.ndarray — indices of min within each segment.
+    """
+    if num_segments is None:
+        num_segments = ak.max(segment_ids) + 1
+    num_segments = int(num_segments)
+
+    data = jax.numpy.asarray(data)
+    segment_ids = jax.numpy.asarray(segment_ids)
+
+    # Create a 2D array where each row corresponds to one segment
+    segmented = jax.vmap(
+        lambda i: jax.numpy.where(segment_ids == i, data, -jax.numpy.inf)
+    )(jax.numpy.arange(num_segments))
+
+    # Apply the argmax along axis 1 (within each segment)
+    return jax.numpy.argmax(segmented, axis=1)
 
 
 @overloads(_reducers.ArgMax)
@@ -85,7 +147,11 @@ class ArgMax(JAXReducer):
         shifts: ak.index.Index | None,
         outlength: ShapeItem,
     ) -> ak.contents.NumpyArray:
-        raise NotImplementedError()
+        assert isinstance(array, ak.contents.NumpyArray)
+        result = segment_argmax(*materialize_if_virtual(array.data, parents.data))
+        result = jax.numpy.asarray(result, dtype=array.dtype)
+
+        return ak.contents.NumpyArray(result, backend=array.backend)
 
 
 @overloads(_reducers.Count)
@@ -112,7 +178,9 @@ class Count(JAXReducer):
         outlength: ShapeItem,
     ) -> ak.contents.NumpyArray:
         assert isinstance(array, ak.contents.NumpyArray)
-        result = jax.numpy.ones_like(array.data, dtype=array.dtype)
+        result = jax.numpy.ones_like(
+            *materialize_if_virtual(array.data), dtype=array.dtype
+        )
         result = jax.ops.segment_sum(result, parents.data)
 
         if np.issubdtype(array.dtype, np.complexfloating):
@@ -172,7 +240,7 @@ class Sum(JAXReducer):
         if array.dtype.kind == "M":
             raise TypeError(f"cannot compute the sum (ak.sum) of {array.dtype!r}")
 
-        result = jax.ops.segment_sum(array.data, parents.data)
+        result = jax.ops.segment_sum(*materialize_if_virtual(array.data, parents.data))
 
         if array.dtype.kind == "m":
             return ak.contents.NumpyArray(
@@ -206,7 +274,10 @@ class Prod(JAXReducer):
         assert isinstance(array, ak.contents.NumpyArray)
         # See issue https://github.com/google/jax/issues/9296
         result = jax.numpy.exp(
-            jax.ops.segment_sum(jax.numpy.log(array.data), parents.data)
+            jax.ops.segment_sum(
+                jax.numpy.log(*materialize_if_virtual(array.data)),
+                *materialize_if_virtual(parents.data),
+            )
         )
 
         if np.issubdtype(array.dtype, np.complexfloating):
@@ -241,7 +312,7 @@ class Any(JAXReducer):
         outlength: ShapeItem,
     ) -> ak.contents.NumpyArray:
         assert isinstance(array, ak.contents.NumpyArray)
-        result = jax.ops.segment_max(array.data, parents.data)
+        result = jax.ops.segment_max(*materialize_if_virtual(array.data, parents.data))
         result = jax.numpy.asarray(result, dtype=bool)
 
         return ak.contents.NumpyArray(result, backend=array.backend)
@@ -271,7 +342,7 @@ class All(JAXReducer):
         outlength: ShapeItem,
     ) -> ak.contents.NumpyArray:
         assert isinstance(array, ak.contents.NumpyArray)
-        result = jax.ops.segment_min(array.data, parents.data)
+        result = jax.ops.segment_min(*materialize_if_virtual(array.data, parents.data))
         result = jax.numpy.asarray(result, dtype=bool)
 
         return ak.contents.NumpyArray(result, backend=array.backend)
@@ -324,7 +395,7 @@ class Min(JAXReducer):
     ) -> ak.contents.NumpyArray:
         assert isinstance(array, ak.contents.NumpyArray)
 
-        result = jax.ops.segment_min(array.data, parents.data)
+        result = jax.ops.segment_min(*materialize_if_virtual(array.data, parents.data))
         result = jax.numpy.minimum(result, self._min_initial(self.initial, array.dtype))
 
         if np.issubdtype(array.dtype, np.complexfloating):
@@ -385,7 +456,7 @@ class Max(JAXReducer):
     ) -> ak.contents.NumpyArray:
         assert isinstance(array, ak.contents.NumpyArray)
 
-        result = jax.ops.segment_max(array.data, parents.data)
+        result = jax.ops.segment_max(*materialize_if_virtual(array.data, parents.data))
 
         result = jax.numpy.maximum(result, self._max_initial(self.initial, array.dtype))
         if np.issubdtype(array.dtype, np.complexfloating):
