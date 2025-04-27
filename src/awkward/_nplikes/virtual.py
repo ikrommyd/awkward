@@ -147,7 +147,7 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
 
     def materialize(self) -> ArrayLike:
         if self._array is UNMATERIALIZED:
-            array = self._nplike.asarray(self.generator())
+            array = self._nplike.asarray(self._generator())
             self._array = array
         return self._array  # type: ignore[return-value]
 
