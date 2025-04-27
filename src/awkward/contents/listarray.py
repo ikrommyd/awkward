@@ -10,6 +10,7 @@ from awkward._backends.backend import Backend
 from awkward._layout import maybe_posaxis
 from awkward._meta.listmeta import ListMeta
 from awkward._nplikes.array_like import ArrayLike
+from awkward._nplikes.jax import Jax
 from awkward._nplikes.numpy_like import IndexType, NumpyMetadata
 from awkward._nplikes.placeholder import PlaceholderArray
 from awkward._nplikes.shape import ShapeItem, unknown_length
@@ -141,7 +142,12 @@ class ListArray(ListMeta[Content], Content):
             raise TypeError(
                 f"{type(self).__name__} 'content' must be a Content subtype, not {content!r}"
             )
-        if content.backend.nplike.known_data and starts.length > stops.length:
+        if (
+            content.backend.nplike.known_data
+            and ak._util.maybe_length_of(starts) is not unknown_length
+            and ak._util.maybe_length_of(stops) is not unknown_length
+            and starts.length > stops.length
+        ):
             raise ValueError(
                 f"{type(self).__name__} len(starts) ({starts.length}) must be <= len(stops) ({stops.length})"
             )
@@ -267,7 +273,7 @@ class ListArray(ListMeta[Content], Content):
 
     def _repr(self, indent, pre, post):
         out = [indent, pre, "<ListArray len="]
-        out.append(repr(str(self.length)))
+        out.append(repr(str(ak._util.maybe_length_of(self))))
         out.append(">")
         out.extend(self._repr_extra(indent + "    "))
         out.append("\n")
@@ -288,12 +294,21 @@ class ListArray(ListMeta[Content], Content):
         if (not nplike.known_data) or nplike.array_equal(starts[1:], stops[:-1]):
             offsets = nplike.empty(lenoffsets, dtype=starts.dtype)
             if lenoffsets is not unknown_length and lenoffsets == 1:
-                offsets[0] = 0
+                if isinstance(nplike, Jax):
+                    offsets = offsets.at[0].set(0)
+                else:
+                    offsets[0] = 0
             else:
-                offsets[:-1] = (
-                    starts.materialize() if isinstance(starts, VirtualArray) else starts
-                )
-                offsets[-1] = stops[-1]
+                if isinstance(nplike, Jax):
+                    offsets = offsets.at[:-1].set(starts)
+                    offsets = offsets.at[-1].set(stops[-1])
+                else:
+                    offsets[:-1] = (
+                        starts.materialize()
+                        if isinstance(starts, VirtualArray)
+                        else starts
+                    )
+                    offsets[-1] = stops[-1]
             return ListOffsetArray(
                 ak.index.Index(offsets, nplike=self._backend.nplike),
                 self._content,
@@ -1368,7 +1383,7 @@ class ListArray(ListMeta[Content], Content):
             self.starts.length,
             self._content.length,
         )
-        if error.str is not None:
+        if error is not None and error.str is not None:
             if error.filename is None:
                 filename = ""
             else:

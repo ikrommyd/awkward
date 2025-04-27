@@ -537,7 +537,7 @@ class UnionArray(UnionMeta[Content], Content):
 
     def _repr(self, indent, pre, post):
         out = [indent, pre, "<UnionArray len="]
-        out.append(repr(str(self.length)))
+        out.append(repr(str(ak._util.maybe_length_of(self))))
         out.append(">")
         out.extend(self._repr_extra(indent + "    "))
         out.append("\n")
@@ -1452,7 +1452,7 @@ class UnionArray(UnionMeta[Content], Content):
             lencontents,
         )
 
-        if error.str is not None:
+        if error is not None and error.str is not None:
             if error.filename is None:
                 filename = ""
             else:
@@ -1685,7 +1685,13 @@ class UnionArray(UnionMeta[Content], Content):
             if len(contents[tag]) > num_tag:
                 if original_index is index:
                     index = index.copy()
-                index[is_tag] = self._backend.nplike.arange(num_tag, dtype=index.dtype)
+                new_index_values = self._backend.nplike.arange(
+                    num_tag, dtype=index.dtype
+                )
+                if isinstance(self._backend.nplike, Jax):
+                    index = index.at[is_tag].set(new_index_values)
+                else:
+                    index[is_tag] = new_index_values
                 contents[tag] = self.project(tag)
 
             contents[tag] = (
