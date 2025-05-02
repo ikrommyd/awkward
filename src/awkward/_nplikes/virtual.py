@@ -22,6 +22,10 @@ if TYPE_CHECKING:
 UNMATERIALIZED = Sentinel("UNMATERIALIZED", None)
 
 
+def assert_never():
+    raise AssertionError("this shape_generator should never be run!")
+
+
 def materialize_if_virtual(*args: Any) -> tuple[Any, ...]:
     """
     A little helper function to materialize all virtual arrays in a list of arrays.
@@ -144,6 +148,7 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
                     f"Only shapes of integer dimensions are supported for materialized shapes. Received shape {shape}"
                 )
             self._shape = tuple(map(int, shape))
+            self._shape_generator = assert_never
 
     def materialize(self) -> ArrayLike:
         if self._array is UNMATERIALIZED:
@@ -335,8 +340,11 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
 
     def __setitem__(self, key, value):
         array = self.materialize()
-        value = value.materialize() if isinstance(value, VirtualArray) else value
-        array.__setitem__(key, value)
+        (value,) = materialize_if_virtual(value)
+        if isinstance(self._nplike, ak._nplikes.jax.Jax):
+            self._array = array.at[key].set(value)
+        else:
+            array.__setitem__(key, value)
 
     def __bool__(self) -> bool:
         array = self.materialize()
