@@ -11,6 +11,7 @@ from awkward._backends.dispatch import (
     regularize_backend,
 )
 from awkward._backends.numpy import NumpyBackend
+from awkward._backends.torch import TorchBackend  # noqa: F401
 from awkward._behavior import behavior_of
 from awkward._nplikes.dispatch import nplike_of_obj
 from awkward._nplikes.numpy import Numpy
