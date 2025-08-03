@@ -341,16 +341,8 @@ class RecordArray(RecordMeta[Content], Content):
         byteorder: str,
     ):
         assert isinstance(form, self.form_cls)
-        if self._fields is None:
-            for i, content in enumerate(self._contents):
-                content._to_buffers(
-                    form.content(i), getkey, container, backend, byteorder
-                )
-        else:
-            for field, content in zip(self._fields, self._contents):
-                content._to_buffers(
-                    form.content(field), getkey, container, backend, byteorder
-                )
+        for i, content in enumerate(self._contents):
+            content._to_buffers(form.content(i), getkey, container, backend, byteorder)
 
     def _to_typetracer(self, forget_length: bool) -> Self:
         backend = TypeTracerBackend.instance()
@@ -379,7 +371,9 @@ class RecordArray(RecordMeta[Content], Content):
             self._length = _calculate_recordarray_length(
                 self._contents, None, self._backend
             )
-            assert is_integer(self._length)
+            assert is_integer(self._length), (
+                f"RecordArray length must be an integer for an array with concrete data, not {type(self._length)}"
+            )
         return self._length
 
     def __repr__(self):

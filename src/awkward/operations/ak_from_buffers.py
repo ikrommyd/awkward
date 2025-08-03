@@ -207,6 +207,10 @@ def _from_buffer(
                 nplike, buffer(), dtype, length, byteorder, field_path, None
             )
 
+        # also store a ref to the original/raw buffer generator
+        # this allows us to access it later again
+        generator.__awkward_raw_generator__ = buffer
+
         return VirtualArray(
             nplike=nplike,
             shape=(count,),
@@ -259,7 +263,7 @@ def _reconstitute(
     if isinstance(form, ak.forms.EmptyForm):
         if length != 0:
             raise ValueError(f"EmptyForm node, but the expected length is {length}")
-        return ak.contents.EmptyArray()
+        return ak.contents.EmptyArray(backend=backend)
 
     elif isinstance(form, ak.forms.NumpyForm):
         dtype = ak.types.numpytype.primitive_to_dtype(form.primitive)
@@ -630,6 +634,7 @@ def _reconstitute(
             None if form.is_tuple else form.fields,
             length,
             parameters=form._parameters,
+            backend=backend,
         )
 
     elif isinstance(form, ak.forms.UnionForm):

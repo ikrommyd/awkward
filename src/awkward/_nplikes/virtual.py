@@ -205,7 +205,7 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
                     "new size of array with larger dtype must be a "
                     "divisor of the total size in bytes (of the last axis of the array)"
                 )
-            shape = self.shape[:-1] + (last,)
+            shape = (*self.shape[:-1], last)
         else:
             shape = self.shape
 
@@ -230,20 +230,6 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
 
     def tolist(self) -> list:
         return self.materialize().tolist()  # type: ignore[attr-defined]
-
-    @property
-    def ctypes(self):
-        if isinstance((self._nplike), ak._nplikes.cupy.Cupy):
-            raise AttributeError("Cupy ndarrays do not have a ctypes attribute")
-        return self.materialize().ctypes
-
-    @property
-    def data(self):
-        return self.materialize().data
-
-    def unsafe_buffer_pointer(self):
-        assert isinstance(self._nplike, ak._nplikes.jax.Jax)
-        return self.materialize().unsafe_buffer_pointer()
 
     def __array__(self, *args, **kwargs):
         array = self.materialize()
@@ -330,10 +316,10 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
 
             return type(self)(
                 self._nplike,
-                (new_length,) + self.shape[1:],
+                (new_length, *self.shape[1:]),
                 self._dtype,
                 lambda: self.materialize()[index],
-                lambda: (new_length,) + self.shape[1:],
+                lambda: (new_length, *self.shape[1:]),
             )
         else:
             return self.materialize().__getitem__(index)
