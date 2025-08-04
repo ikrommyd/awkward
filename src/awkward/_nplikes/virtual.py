@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import copy
-
 import awkward as ak
 from awkward._nplikes.array_like import ArrayLike
 from awkward._nplikes.numpy_like import NumpyLike, NumpyMetadata
@@ -209,7 +207,17 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
         return self._nplike
 
     def copy(self) -> VirtualArray:
-        return copy.copy(self)
+        new_virtual = type(self)(
+            self._nplike,
+            self._shape,
+            self._dtype,
+            lambda: self._generator().copy(),  # type: ignore[attr-defined]
+            lambda: self.shape,
+        )
+        new_virtual._array = (
+            self._array.copy() if self._array is not UNMATERIALIZED else UNMATERIALIZED  # type: ignore[union-attr]
+        )
+        return new_virtual
 
     def tolist(self) -> list:
         return self.materialize().tolist()  # type: ignore[attr-defined]
@@ -230,30 +238,10 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
         return self.materialize().tobytes(order)  # type: ignore[attr-defined]
 
     def __copy__(self) -> VirtualArray:
-        new_virtual = type(self)(
-            self._nplike,
-            self._shape,
-            self._dtype,
-            self._generator,
-            self._shape_generator,
-        )
-        new_virtual._array = self._array
-        return new_virtual
+        return self.copy()
 
     def __deepcopy__(self, memo) -> VirtualArray:
-        new_virtual = type(self)(
-            self._nplike,
-            self._shape,
-            self._dtype,
-            lambda: copy.deepcopy(self._generator(), memo),
-            self._shape_generator,
-        )
-        new_virtual._array = (
-            copy.deepcopy(self._array, memo)
-            if self._array is not UNMATERIALIZED
-            else UNMATERIALIZED
-        )
-        return new_virtual
+        return self.copy()
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         return self.nplike.apply_ufunc(ufunc, method, inputs, kwargs)
