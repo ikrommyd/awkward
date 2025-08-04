@@ -211,7 +211,7 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
             self._nplike,
             self._shape,
             self._dtype,
-            lambda: self._generator().copy(),  # type: ignore[attr-defined]
+            lambda: self.materialize().copy(),  # type: ignore[attr-defined]
             lambda: self.shape,
         )
         new_virtual._array = (
