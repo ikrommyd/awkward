@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import copy
+import inspect
+import warnings
 
 import awkward as ak
 from awkward._nplikes.array_like import ArrayLike
@@ -338,3 +340,14 @@ class VirtualNDArray(NDArrayOperatorsMixin, ArrayLike):
 
     def __dlpack__(self, stream: Any = None) -> Any:
         return self.materialize().__dlpack__(stream=stream)  # type: ignore[attr-defined]
+
+
+class VirtualArray(VirtualNDArray):
+    def __init__(self, *args, **kwargs):
+        msg = """
+        VirtualArray has been renamed to VirtualNDArray.
+        The VirtualArray class is deprecated and will be removed in a future release.
+        Please use VirtualNDArray instead.
+        """
+        warnings.warn(inspect.cleandoc(msg), DeprecationWarning, stacklevel=2)
+        super().__init__(*args, **kwargs)
