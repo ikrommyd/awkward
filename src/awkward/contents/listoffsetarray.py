@@ -16,7 +16,7 @@ from awkward._nplikes.numpy_like import IndexType, NumpyMetadata
 from awkward._nplikes.placeholder import PlaceholderArray
 from awkward._nplikes.shape import ShapeItem, unknown_length
 from awkward._nplikes.typetracer import TypeTracer, is_unknown_scalar
-from awkward._nplikes.virtual import VirtualArray, materialize_if_virtual
+from awkward._nplikes.virtual import VirtualNDArray, materialize_if_virtual
 from awkward._parameters import (
     type_parameters_equal,
 )
@@ -316,7 +316,7 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
 
     def _is_getitem_at_virtual(self) -> bool:
         is_virtual = (
-            isinstance(self._offsets.data, VirtualArray)
+            isinstance(self._offsets.data, VirtualNDArray)
             and not self._offsets.data.is_materialized
         )
         return is_virtual or self._content._is_getitem_at_virtual()

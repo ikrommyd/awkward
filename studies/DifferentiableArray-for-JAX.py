@@ -100,7 +100,7 @@ def find_datanode(formjson, form_key):
             if out is not None:
                 if out == formjson[k]:
                     formjson[k] = {
-                        "class": "VirtualArray",
+                        "class": "VirtualNDArray",
                         "form": out,
                         "has_length": True,
                         "has_identities": False,
@@ -116,7 +116,7 @@ def find_datanode(formjson, form_key):
             if out is not None:
                 if out == formjson[i]:
                     formjson[i] = {
-                        "class": "VirtualArray",
+                        "class": "VirtualNDArray",
                         "form": out,
                         "has_length": True,
                         "has_identities": False,

@@ -17,7 +17,7 @@ from awkward._nplikes.numpy_like import IndexType, NumpyMetadata
 from awkward._nplikes.placeholder import PlaceholderArray
 from awkward._nplikes.shape import ShapeItem, unknown_length
 from awkward._nplikes.typetracer import MaybeNone, TypeTracer
-from awkward._nplikes.virtual import VirtualArray, materialize_if_virtual
+from awkward._nplikes.virtual import VirtualNDArray, materialize_if_virtual
 from awkward._regularize import is_integer, is_integer_like
 from awkward._slicing import NO_HEAD
 from awkward._typing import (
@@ -476,7 +476,7 @@ class BitMaskedArray(BitMaskedMeta[Content], Content):
 
     def _is_getitem_at_virtual(self) -> bool:
         is_virtual = (
-            isinstance(self._mask.data, VirtualArray)
+            isinstance(self._mask.data, VirtualNDArray)
             and not self._mask.data.is_materialized
         )
         if is_virtual:

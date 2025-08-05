@@ -159,7 +159,7 @@ class _ParquetState(object):
                             lazy_cache_key, subform.form_key, row_group
                         )
                     contents.append(
-                        ak.layout.VirtualArray(generator, field_cache, cache_key)
+                        ak.layout.VirtualNDArray(generator, field_cache, cache_key)
                     )
                     recordlookup.append(name)
                 return ak.layout.RecordArray(contents, recordlookup, length)
@@ -285,7 +285,7 @@ def from_parquet(source):
             cache_key = "{0}:{1}[{2}]".format(
                 lazy_cache_key, subform.form_key, row_group
             )
-        fields.append(ak.layout.VirtualArray(generator, field_cache, cache_key))
+        fields.append(ak.layout.VirtualNDArray(generator, field_cache, cache_key))
         names.append(column)
 
     return ak.Array(ak.layout.RecordArray(fields, names))

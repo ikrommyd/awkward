@@ -31,11 +31,11 @@ def materialize_if_virtual(*args: Any) -> tuple[Any, ...]:
     A little helper function to materialize all virtual arrays in a list of arrays.
     """
     return tuple(
-        arg.materialize() if isinstance(arg, VirtualArray) else arg for arg in args
+        arg.materialize() if isinstance(arg, VirtualNDArray) else arg for arg in args
     )
 
 
-class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
+class VirtualNDArray(NDArrayOperatorsMixin, ArrayLike):
     """
     Implements a virtual array to be used as a buffer inside layouts.
     Virtual arrays are tied to specific nplikes.
@@ -208,7 +208,7 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
             )
         return self._nplike
 
-    def copy(self) -> VirtualArray:
+    def copy(self) -> VirtualNDArray:
         return copy.copy(self)
 
     def tolist(self) -> list:
@@ -229,7 +229,7 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
     def tobytes(self, order="C") -> bytes:
         return self.materialize().tobytes(order)  # type: ignore[attr-defined]
 
-    def __copy__(self) -> VirtualArray:
+    def __copy__(self) -> VirtualNDArray:
         new_virtual = type(self)(
             self._nplike,
             self._shape,
@@ -240,7 +240,7 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
         new_virtual._array = self._array
         return new_virtual
 
-    def __deepcopy__(self, memo) -> VirtualArray:
+    def __deepcopy__(self, memo) -> VirtualNDArray:
         new_virtual = type(self)(
             self._nplike,
             self._shape,
@@ -264,7 +264,7 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
             shape = ""
         else:
             shape = f", shape={self._shape!r}"
-        return f"VirtualArray(array={self._array}, {dtype}{shape})"
+        return f"VirtualNDArray(array={self._array}, {dtype}{shape})"
 
     def __str__(self):
         return repr(self) if self._shape else "??"

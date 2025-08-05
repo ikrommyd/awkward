@@ -21,7 +21,7 @@ from awkward._nplikes.numpy_like import IndexType, NumpyMetadata
 from awkward._nplikes.placeholder import PlaceholderArray
 from awkward._nplikes.shape import ShapeItem, unknown_length
 from awkward._nplikes.typetracer import TypeTracerArray
-from awkward._nplikes.virtual import VirtualArray, materialize_if_virtual
+from awkward._nplikes.virtual import VirtualNDArray, materialize_if_virtual
 from awkward._parameters import (
     parameters_intersect,
     type_parameters_equal,
@@ -319,7 +319,7 @@ class NumpyArray(NumpyMeta, Content):
 
     def _is_getitem_at_virtual(self) -> bool:
         is_virtual = (
-            isinstance(self._data, VirtualArray) and not self._data.is_materialized
+            isinstance(self._data, VirtualNDArray) and not self._data.is_materialized
         )
         return is_virtual
 
@@ -1389,14 +1389,14 @@ class NumpyArray(NumpyMeta, Content):
     @property
     def _is_all_materialized(self) -> bool:
         buffer = self._data
-        if isinstance(buffer, VirtualArray):
+        if isinstance(buffer, VirtualNDArray):
             return buffer.is_materialized
         return True
 
     @property
     def _is_any_materialized(self) -> bool:
         buffer = self._data
-        if isinstance(buffer, VirtualArray):
+        if isinstance(buffer, VirtualNDArray):
             return buffer.is_materialized
         return True
 

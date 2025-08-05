@@ -10,7 +10,7 @@ from awkward._nplikes.dispatch import register_nplike
 from awkward._nplikes.numpy_like import ArrayLike
 from awkward._nplikes.placeholder import PlaceholderArray
 from awkward._nplikes.shape import ShapeItem
-from awkward._nplikes.virtual import VirtualArray, materialize_if_virtual
+from awkward._nplikes.virtual import VirtualNDArray, materialize_if_virtual
 from awkward._typing import TYPE_CHECKING, Final
 
 if TYPE_CHECKING:
@@ -49,8 +49,8 @@ class Cupy(ArrayModuleNumpyLike):
     def frombuffer(
         self, buffer, *, dtype: DTypeLike | None = None, count: ShapeItem = -1
     ) -> ArrayLike:
-        assert not isinstance(buffer, (PlaceholderArray, VirtualArray))
-        assert not isinstance(count, (PlaceholderArray, VirtualArray))
+        assert not isinstance(buffer, (PlaceholderArray, VirtualNDArray))
+        assert not isinstance(count, (PlaceholderArray, VirtualNDArray))
         np_array = numpy.frombuffer(buffer, dtype=dtype, count=count)
         return self._module.asarray(np_array)
 

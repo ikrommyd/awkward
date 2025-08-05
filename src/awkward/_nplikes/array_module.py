@@ -16,7 +16,7 @@ from awkward._nplikes.numpy_like import (
 )
 from awkward._nplikes.placeholder import PlaceholderArray
 from awkward._nplikes.shape import ShapeItem, unknown_length
-from awkward._nplikes.virtual import VirtualArray, materialize_if_virtual
+from awkward._nplikes.virtual import VirtualNDArray, materialize_if_virtual
 from awkward._typing import TYPE_CHECKING, Any, DType, Final, Literal, TypeVar, cast
 
 if TYPE_CHECKING:
@@ -60,18 +60,18 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLikeT]):
         *,
         dtype: DTypeLike | None = None,
         copy: bool | None = None,
-    ) -> ArrayLikeT | PlaceholderArray | VirtualArray:
+    ) -> ArrayLikeT | PlaceholderArray | VirtualNDArray:
         if isinstance(obj, PlaceholderArray):
             assert obj.dtype == dtype or dtype is None
             return obj
-        if isinstance(obj, VirtualArray):
+        if isinstance(obj, VirtualNDArray):
             if obj.is_materialized:
                 obj = obj.materialize()
             else:
                 if obj.dtype == dtype or dtype is None:
                     return obj
                 else:
-                    return VirtualArray(
+                    return VirtualNDArray(
                         obj._nplike,
                         obj._shape,
                         dtype,
@@ -92,14 +92,14 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLikeT]):
 
     def ascontiguousarray(
         self, x: ArrayLikeT | PlaceholderArray
-    ) -> ArrayLikeT | PlaceholderArray | VirtualArray:
+    ) -> ArrayLikeT | PlaceholderArray | VirtualNDArray:
         if isinstance(x, PlaceholderArray):
             return x
-        elif isinstance(x, VirtualArray):
+        elif isinstance(x, VirtualNDArray):
             if x.is_materialized:
                 return self.ascontiguousarray(x.materialize())  #  type: ignore[arg-type]
             else:
-                return VirtualArray(
+                return VirtualNDArray(
                     x._nplike,
                     x._shape,
                     x._dtype,
@@ -114,7 +114,7 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLikeT]):
     ) -> ArrayLikeT:
         if isinstance(buffer, PlaceholderArray):
             raise TypeError("placeholder arrays are not supported in `frombuffer`")
-        if isinstance(buffer, VirtualArray):
+        if isinstance(buffer, VirtualNDArray):
             raise TypeError("virtual arrays are not supported in `frombuffer`")
         return self._module.frombuffer(buffer, dtype=dtype, count=count)
 
@@ -157,7 +157,7 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLikeT]):
     def zeros_like(
         self, x: ArrayLikeT | PlaceholderArray, *, dtype: DTypeLike | None = None
     ) -> ArrayLikeT:
-        if isinstance(x, (PlaceholderArray, VirtualArray)):
+        if isinstance(x, (PlaceholderArray, VirtualNDArray)):
             return self.zeros(x.shape, dtype=dtype or x.dtype)
         else:
             return self._module.zeros_like(x, dtype=dtype)
@@ -165,7 +165,7 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLikeT]):
     def ones_like(
         self, x: ArrayLikeT | PlaceholderArray, *, dtype: DTypeLike | None = None
     ) -> ArrayLikeT:
-        if isinstance(x, (PlaceholderArray, VirtualArray)):
+        if isinstance(x, (PlaceholderArray, VirtualNDArray)):
             return self.ones(x.shape, dtype=dtype or x.dtype)
         else:
             return self._module.ones_like(x, dtype=dtype)
@@ -177,7 +177,7 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLikeT]):
         *,
         dtype: DTypeLike | None = None,
     ) -> ArrayLikeT:
-        if isinstance(x, (PlaceholderArray, VirtualArray)):
+        if isinstance(x, (PlaceholderArray, VirtualNDArray)):
             return self.full(x.shape, fill_value, dtype=dtype or x.dtype)
         else:
             return self._module.full_like(
@@ -345,14 +345,14 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLikeT]):
         shape: tuple[ShapeItem, ...],
         *,
         copy: bool | None = None,
-    ) -> ArrayLikeT | PlaceholderArray | VirtualArray:
+    ) -> ArrayLikeT | PlaceholderArray | VirtualNDArray:
         if isinstance(x, PlaceholderArray):
             next_shape = self._compute_compatible_shape(shape, x.shape)
             return PlaceholderArray(self, next_shape, x.dtype, x._field_path)
-        if isinstance(x, VirtualArray):
+        if isinstance(x, VirtualNDArray):
             if not x.is_materialized:
                 next_shape = self._compute_compatible_shape(shape, x.shape)
-                return VirtualArray(
+                return VirtualNDArray(
                     self,
                     next_shape,
                     x.dtype,
@@ -764,7 +764,7 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLikeT]):
         precision: int | None = None,
         suppress_small: bool | None = None,
     ):
-        if isinstance(x, VirtualArray) and not x.is_materialized:
+        if isinstance(x, VirtualNDArray) and not x.is_materialized:
             return "[## ... ##]"
         (x,) = materialize_if_virtual(x)
         if isinstance(x, PlaceholderArray):
@@ -794,10 +794,10 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLikeT]):
         # We are required to know if different nplikes own virtual arrays throughout the code
         # and that can only be determined by the underlying nplike of the virtual array
         # as virtual arrays can generate either numpy or cupy ndarrays.
-        # The VirtualArray type is now enough. We need the underlying nplike to determine ownership.
+        # The VirtualNDArray type is now enough. We need the underlying nplike to determine ownership.
         # All nplikes implement an ndarray property so we can can use that.
         # There is an extra isinstance check here but that has to live somewhere in the code either way to determine ownership.
-        if isinstance(obj, VirtualArray):
+        if isinstance(obj, VirtualNDArray):
             return cls.is_own_array_type(obj.nplike.ndarray)
         return cls.is_own_array_type(type(obj))
 

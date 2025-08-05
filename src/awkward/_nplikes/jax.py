@@ -8,7 +8,7 @@ from awkward._nplikes.array_module import ArrayModuleNumpyLike
 from awkward._nplikes.dispatch import register_nplike
 from awkward._nplikes.numpy_like import UfuncLike
 from awkward._nplikes.placeholder import PlaceholderArray
-from awkward._nplikes.virtual import VirtualArray, materialize_if_virtual
+from awkward._nplikes.virtual import VirtualNDArray, materialize_if_virtual
 from awkward._typing import Final, cast
 
 
@@ -87,7 +87,7 @@ class Jax(ArrayModuleNumpyLike):
         return True
 
     def ascontiguousarray(self, x: ArrayLike) -> ArrayLike:
-        if isinstance(x, VirtualArray) and x.is_materialized:
+        if isinstance(x, VirtualNDArray) and x.is_materialized:
             return x.materialize()
         else:
             return x

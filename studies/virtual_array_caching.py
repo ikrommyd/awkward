@@ -10,7 +10,7 @@ def generate():
 class Cache():
     def __init__(self, )
 
-class VirtualArray():
+class VirtualNDArray():
     def __init__(self, generator, cache=None, cache_key=None):
         assert callable(generator)
         if cache is not None:
@@ -32,7 +32,7 @@ class VirtualArray():
         return self.cache[where]
 
     def __repr__(self):
-        return '{}, D({})'.format(super(VirtualArray, self).__repr__(), 
+        return '{}, D({})'.format(super(VirtualNDArray, self).__repr__(),
                                   self.__dict__)
 
     def xml(self, indent="", pre="", post=""):
@@ -47,5 +47,5 @@ class VirtualArray():
             self.cache_key = str(counter[0])
         return array
 
-va = VirtualArray(generate, {"ak0": 'Ferrari', "ak1": 'Mercedes', "ak2": 'Red Bull', "ak3": 'McLaren'}, "ak2")
+va = VirtualNDArray(generate, {"ak0": 'Ferrari', "ak1": 'Mercedes', "ak2": 'Red Bull', "ak3": 'McLaren'}, "ak2")
 print(va.array())

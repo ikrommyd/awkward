@@ -14,7 +14,7 @@ from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import NumpyLike, NumpyMetadata
 from awkward._nplikes.shape import ShapeItem
 from awkward._nplikes.typetracer import TypeTracer
-from awkward._nplikes.virtual import VirtualArray, materialize_if_virtual
+from awkward._nplikes.virtual import VirtualNDArray, materialize_if_virtual
 from awkward._slicing import normalize_slice
 from awkward._typing import Any, DType, Final, Self, cast
 
@@ -163,14 +163,14 @@ class Index:
     @property
     def is_all_materialized(self) -> bool:
         buffer = self._data
-        if isinstance(buffer, VirtualArray):
+        if isinstance(buffer, VirtualNDArray):
             return buffer.is_materialized
         return True
 
     @property
     def is_any_materialized(self) -> bool:
         buffer = self._data
-        if isinstance(buffer, VirtualArray):
+        if isinstance(buffer, VirtualNDArray):
             return buffer.is_materialized
         return True
 
@@ -252,7 +252,7 @@ class Index:
         (data, where, what) = materialize_if_virtual(self._data, where, what)
         if isinstance(self._nplike, Jax):
             new_data = data.at[where].set(what)
-            if isinstance(self._data, VirtualArray):
+            if isinstance(self._data, VirtualNDArray):
                 self._data._array = new_data
             else:
                 self._data = new_data
