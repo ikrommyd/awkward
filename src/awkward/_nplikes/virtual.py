@@ -303,8 +303,6 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
                 new_length = max(
                     0, (stop - start + (step - (1 if step > 0 else -1))) // step
                 )
-                if start == 0 and stop == length and step == 1:
-                    return self
 
             return type(self)(
                 self._nplike,
