@@ -56,6 +56,7 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
         dtype: DTypeLike,
         generator: Callable[[], ArrayLike],
         shape_generator: Callable[[], tuple[ShapeItem, ...]] | None = None,
+        __known_c_contiguous__: bool = False,
     ) -> None:
         if not nplike.supports_virtual_arrays:
             raise TypeError(
@@ -73,6 +74,7 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
         self._array: Sentinel | ArrayLike = UNMATERIALIZED
         self._generator = generator
         self._shape_generator = shape_generator
+        self._known_c_contiguous = __known_c_contiguous__
 
     @property
     def dtype(self) -> DType:
@@ -149,6 +151,10 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
                 raise ValueError(
                     f"{type(self).__name__} had dtype {self._dtype} before materialization while the materialized array has dtype {array.dtype}"
                 )
+            if self._known_c_contiguous and not self._nplike.is_c_contiguous(array):
+                raise ValueError(
+                    f"{type(self).__name__} was expected to be C-contiguous but the materialized array is not"
+                )
             self._shape = array.shape
             self._array = array
         return self._array  # type: ignore[return-value]
@@ -171,6 +177,7 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
             self._dtype,
             lambda: self.materialize().T,
             lambda: self.shape[::-1],
+            self._known_c_contiguous if self.ndim <= 1 else False,
         )
 
     def view(self, dtype: DTypeLike) -> Self:
@@ -198,6 +205,7 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
             dtype,
             lambda: self.materialize().view(dtype),
             lambda: shape,
+            self._known_c_contiguous,
         )
 
     @property
@@ -224,6 +232,7 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
             self._dtype,
             lambda: self.materialize().byteswap(inplace=inplace),
             lambda: self.shape,
+            self.known_c_contiguous,
         )
 
     def tobytes(self, order="C") -> bytes:
@@ -236,6 +245,7 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
             self._dtype,
             self._generator,
             self._shape_generator,
+            self._known_c_contiguous,
         )
         new_virtual._array = self._array
         return new_virtual
@@ -247,6 +257,7 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
             self._dtype,
             lambda: copy.deepcopy(self._generator(), memo),
             self._shape_generator,
+            self._known_c_contiguous,
         )
         new_virtual._array = (
             copy.deepcopy(self._array, memo)
@@ -296,6 +307,7 @@ class VirtualArray(NDArrayOperatorsMixin, ArrayLike):
                 self._dtype,
                 lambda: self.materialize()[index],
                 lambda: (new_length, *self.shape[1:]),
+                self._known_c_contiguous if step == 1 else False,
             )
         else:
             return self.materialize().__getitem__(index)
