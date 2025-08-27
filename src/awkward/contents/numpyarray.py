@@ -1383,7 +1383,10 @@ class NumpyArray(NumpyMeta, Content):
         )
 
     def _materialize(self) -> Self:
-        (out,) = maybe_materialize(self._data)
+        if isinstance(self._data, VirtualNDArray):
+            out = self._data.materialize()
+        else:
+            out = self._data
         return NumpyArray(out, parameters=self._parameters, backend=self._backend)
 
     @property

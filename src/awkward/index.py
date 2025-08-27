@@ -157,7 +157,10 @@ class Index:
         return to_nplike(self.data, nplike, from_nplike=self._nplike)
 
     def materialize(self) -> Index:
-        (out,) = maybe_materialize(self._data)
+        if isinstance(self._data, VirtualNDArray):
+            out = self._data.materialize()
+        else:
+            out = self._data
         return Index(out, metadata=self.metadata, nplike=self._nplike)
 
     @property
