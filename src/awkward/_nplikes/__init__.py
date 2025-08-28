@@ -26,7 +26,7 @@ def to_nplike(
                 f"internal error: expected an array supported by an existing nplike, got {type(array).__name__!r}"
             )
 
-    if isinstance(array, awkward._nplikes.virtual.VirtualArray):
+    if isinstance(array, awkward._nplikes.virtual.VirtualNDArray):
         array = array.materialize()
 
     if nplike.known_data and not from_nplike.known_data:

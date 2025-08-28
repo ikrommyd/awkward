@@ -88,7 +88,7 @@ def _find_innermost_content(array):
 
 
 def _convert_to_tensor_if_cupy(array):
-    (array,) = ak._nplikes.virtual.materialize_if_virtual(array)
+    (array,) = ak._nplikes.virtual.maybe_materialize(array)
     if isinstance(array, np.ndarray):
         return array
     else:
