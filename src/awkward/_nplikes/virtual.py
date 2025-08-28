@@ -404,12 +404,12 @@ class VirtualNDArray(NDArrayOperatorsMixin, MaterializableArray):
 
 
 # backward compatibility
-class VirtualNDArray(VirtualNDArray):
+class VirtualArray(VirtualNDArray):
     def __init__(self, *args, **kwargs):
         import warnings
 
         warnings.warn(
-            "The `VirtualNDArray` class is deprecated and will be removed in a future release of Awkward Array. "
+            "The `VirtualArray` class is deprecated and will be removed in a future release of Awkward Array. "
             "Please plan to migrate your code to use the `VirtualNDArray` class instead.",
             DeprecationWarning,
             stacklevel=2,
