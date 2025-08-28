@@ -253,7 +253,7 @@ class VirtualNDArray(NDArrayOperatorsMixin, MaterializableArray):
         array = self.materialize()
         try:
             return array.__array__(*args, **kwargs)
-        except:
+        except:  # noqa: E722
             return array.get().__array__(*args, **kwargs)
 
     def byteswap(self, inplace=False):
