@@ -1396,8 +1396,8 @@ class NumpyArray(NumpyMeta, Content):
             backend=backend,
         )
 
-    def _materialize(self) -> Self:
-        (out,) = maybe_materialize(self._data)
+    def _materialize(self, type_) -> Self:
+        (out,) = maybe_materialize(self._data, type_=type_)
         return NumpyArray(out, parameters=self._parameters, backend=self._backend)
 
     @property
