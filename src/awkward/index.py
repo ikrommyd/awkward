@@ -163,7 +163,7 @@ class Index:
         if isinstance(self._nplike, type(tt)):
             data = self._data
         else:
-            data = self.raw(tt)
+            data = self.raw(tt)  # type: ignore[assignment]
 
         assert hasattr(data, "forget_length")
         return type(self)(data.forget_length(), metadata=self._metadata, nplike=tt)

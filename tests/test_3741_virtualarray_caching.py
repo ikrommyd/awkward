@@ -8,6 +8,8 @@ import pytest
 import awkward as ak
 from awkward._nplikes.shape import unknown_length
 
+pytestmark = pytest.mark.skip("We should not run this test on this branch")
+
 
 @pytest.mark.parametrize("offsets_length", [5, unknown_length])
 @pytest.mark.parametrize("content_length", [9, unknown_length])

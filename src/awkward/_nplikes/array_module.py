@@ -107,7 +107,7 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLikeT]):
                     x._nplike,
                     x._shape,
                     x._dtype,
-                    lambda: self.ascontiguousarray(x.materialize()),  # type: ignore[arg-type]
+                    lambda: self.ascontiguousarray(x.materialize()),  # type: ignore[union-attr]
                     lambda: x.shape,
                     __enable_caching__=x.__enable_caching__,
                 )
