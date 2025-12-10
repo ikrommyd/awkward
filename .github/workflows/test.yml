@@ -91,7 +91,7 @@ jobs:
       PIP_ONLY_BINARY: numpy,pandas,pyarrow,numexpr,numexpr
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           submodules: true
 
@@ -188,6 +188,7 @@ jobs:
       matrix:
         cuda-version:
           - 12
+          - 13
 
     steps:
       - name: Clean the workspace and mamba
@@ -195,7 +196,7 @@ jobs:
           rm -rf * .[!.]* || echo "Nothing to clean"
           rm -rf ~/micromamba* || echo "Nothing to clean"
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           submodules: true
 
@@ -211,6 +212,8 @@ jobs:
             cudf
             cupy
             cuda-version=${{ matrix.cuda-version }}
+            cuda-toolkit
+            cxx-compiler
 
       - name: Generate build files
         run: |
@@ -273,7 +276,7 @@ jobs:
         shell: "bash -l {0}"
 
     steps:
-      - uses: "actions/checkout@v5"
+      - uses: "actions/checkout@v6"
         with:
           submodules: true
 
@@ -327,7 +330,7 @@ jobs:
       PIP_ONLY_BINARY: numpy,pandas,pyarrow,numexpr,numexpr
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           submodules: true
 
