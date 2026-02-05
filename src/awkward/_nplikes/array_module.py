@@ -80,6 +80,7 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLikeT]):
                     obj._dtype if dtype is None else dtype,
                     lambda: self.asarray(obj.materialize(), dtype=dtype, copy=copy),
                     lambda: obj.shape,
+                    obj._buffer_key,
                     __enable_caching__=obj.__enable_caching__,
                 )
         if copy:
@@ -109,6 +110,7 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLikeT]):
                     x._dtype,
                     lambda: self.ascontiguousarray(x.materialize()),  # type: ignore[union-attr]
                     lambda: x.shape,
+                    x._buffer_key,
                     __enable_caching__=x.__enable_caching__,
                 )
         else:
@@ -278,7 +280,7 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLikeT]):
         # Interpret the arguments under these dtypes, converting scalars to length-1 arrays
         resolved_args = [
             cast("ArrayLikeT", self.asarray(arg, dtype=dtype))
-            for arg, dtype in zip(args, resolved_dtypes)
+            for arg, dtype in zip(args, resolved_dtypes[: len(args)], strict=True)
         ]
         # Broadcast to ensure all-scalar or all-nd-array
         broadcasted_args = self.broadcast_arrays(*resolved_args)
@@ -306,7 +308,8 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLikeT]):
         broadcasted_args = self.broadcast_arrays(*resolved_args)
         # Choose the broadcasted argument if it wasn't a Python scalar
         non_generic_value_promoted_args = [
-            y if hasattr(x, "ndim") else x for x, y in zip(args, broadcasted_args)
+            y if hasattr(x, "ndim") else x
+            for x, y in zip(args, broadcasted_args, strict=True)
         ]
         # Allow other nplikes to replace implementation
         impl = self.prepare_ufunc(ufunc)
@@ -343,7 +346,7 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLikeT]):
     ) -> ArrayLikeT | PlaceholderArray | VirtualNDArray:
         if isinstance(x, PlaceholderArray):
             next_shape = self._compute_compatible_shape(shape, x.shape)
-            return PlaceholderArray(self, next_shape, x.dtype, x._field_path)
+            return PlaceholderArray(self, next_shape, x.dtype, x._buffer_key)
         if isinstance(x, VirtualNDArray):
             if x.is_materialized:
                 return self.reshape(x.materialize(), shape, copy=copy)  # type: ignore[arg-type]
@@ -359,6 +362,7 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLikeT]):
                     x.dtype,
                     lambda: self.reshape(x.materialize(), next_shape, copy=copy),  # type: ignore[arg-type]
                     None,
+                    x._buffer_key,
                     __enable_caching__=x.__enable_caching__,
                 )
 
@@ -755,9 +759,12 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLikeT]):
         return x.astype(dtype, copy=copy)  # type: ignore[attr-defined]
 
     def can_cast(
-        self, from_: DTypeLike | ArrayLikeT, to: DTypeLike | ArrayLikeT
+        self,
+        from_: DTypeLike | ArrayLikeT,
+        to: DTypeLike | ArrayLikeT,
+        casting: Literal["no", "equiv", "safe", "same_kind", "unsafe"] = "same_kind",
     ) -> bool:
-        return self._module.can_cast(from_, to, casting="same_kind")
+        return self._module.can_cast(from_, to, casting=casting)
 
     @classmethod
     def is_own_array(cls, obj) -> bool:

@@ -67,6 +67,7 @@ class VirtualNDArray(NDArrayOperatorsMixin, MaterializableArray):
     __slots__ = (
         "__enable_caching__",
         "_array",
+        "_buffer_key",
         "_dtype",
         "_generator",
         "_nplike",
@@ -81,6 +82,8 @@ class VirtualNDArray(NDArrayOperatorsMixin, MaterializableArray):
         dtype: DTypeLike,
         generator: Callable[[], ArrayLike],
         shape_generator: Callable[[], tuple[ShapeItem, ...]] | None = None,
+        buffer_key: str | None = None,
+        *,
         __wrap_generator_asarray__: bool = False,
         __enable_caching__: bool = True,
     ) -> None:
@@ -106,6 +109,9 @@ class VirtualNDArray(NDArrayOperatorsMixin, MaterializableArray):
         self._generator = generator
         self._shape_generator = shape_generator
 
+        # buffer key
+        self._buffer_key = buffer_key
+
         self.__enable_caching__ = __enable_caching__
 
     @property
@@ -124,6 +130,10 @@ class VirtualNDArray(NDArrayOperatorsMixin, MaterializableArray):
 
     def argsort(self, axis=-1, kind=None, order=None, *, stable=None):
         return self.materialize().argsort(axis, kind, order, stable=stable)
+
+    @property
+    def buffer_key(self) -> str | None:
+        return self._buffer_key
 
     @property
     def dtype(self) -> DType:
@@ -172,7 +182,7 @@ class VirtualNDArray(NDArrayOperatorsMixin, MaterializableArray):
                 raise ValueError(
                     f"{type(self).__name__} had shape {self._shape} before materialization while the materialized array has shape {shape}"
                 )
-            for expected_dim, actual_dim in zip(self._shape, shape):
+            for expected_dim, actual_dim in zip(self._shape, shape, strict=True):
                 if expected_dim is not unknown_length and expected_dim != actual_dim:
                     raise ValueError(
                         f"{type(self).__name__} had shape {self._shape} before materialization while the materialized array has shape {shape}"
@@ -187,6 +197,20 @@ class VirtualNDArray(NDArrayOperatorsMixin, MaterializableArray):
     def materialize(self) -> ArrayLike:
         if self._array is UNMATERIALIZED:
             array = _lazy_asarray(self._nplike, self._generator)()
+            if len(self._shape) != len(array.shape):
+                raise ValueError(
+                    f"{type(self).__name__} had shape {self._shape} before materialization while the materialized array has shape {array.shape}"
+                )
+            for expected_dim, actual_dim in zip(self._shape, array.shape, strict=True):
+                if expected_dim is not unknown_length and expected_dim != actual_dim:
+                    raise ValueError(
+                        f"{type(self).__name__} had shape {self._shape} before materialization while the materialized array has shape {array.shape}"
+                    )
+            if self._dtype != array.dtype:
+                raise ValueError(
+                    f"{type(self).__name__} had dtype {self._dtype} before materialization while the materialized array has dtype {array.dtype}"
+                )
+            self._shape = array.shape
             if self.__enable_caching__:
                 self._array = array
                 self._shape_generator = assert_never
@@ -214,6 +238,7 @@ class VirtualNDArray(NDArrayOperatorsMixin, MaterializableArray):
             self._dtype,
             lambda: self.materialize().T,
             lambda: self.shape[::-1],
+            self._buffer_key,
             __enable_caching__=self.__enable_caching__,
         )
 
@@ -247,6 +272,7 @@ class VirtualNDArray(NDArrayOperatorsMixin, MaterializableArray):
             dtype,
             lambda: self.materialize().view(dtype),
             None,
+            self._buffer_key,
             __enable_caching__=self.__enable_caching__,
         )
 
@@ -281,6 +307,7 @@ class VirtualNDArray(NDArrayOperatorsMixin, MaterializableArray):
             self._dtype,
             lambda: self.materialize().byteswap(inplace=inplace),
             lambda: self.shape,
+            self._buffer_key,
             __enable_caching__=self.__enable_caching__,
         )
 
@@ -294,6 +321,7 @@ class VirtualNDArray(NDArrayOperatorsMixin, MaterializableArray):
             self._dtype,
             self._generator,
             self._shape_generator,
+            self._buffer_key,
             __enable_caching__=self.__enable_caching__,
         )
         new_virtual._array = self._array
@@ -307,6 +335,7 @@ class VirtualNDArray(NDArrayOperatorsMixin, MaterializableArray):
             self._dtype,
             lambda: copy.deepcopy(current_generator(), memo),
             self._shape_generator,
+            self._buffer_key,
             __enable_caching__=self.__enable_caching__,
         )
         new_virtual._array = (
@@ -361,6 +390,7 @@ class VirtualNDArray(NDArrayOperatorsMixin, MaterializableArray):
                 self._dtype,
                 lambda: self.materialize()[index],
                 None,
+                self._buffer_key,
                 __enable_caching__=self.__enable_caching__,
             )
         else:
@@ -407,17 +437,3 @@ class VirtualNDArray(NDArrayOperatorsMixin, MaterializableArray):
 
     def __reduce__(self):
         return self.materialize().__reduce__()
-
-
-# backward compatibility
-class VirtualArray(VirtualNDArray):
-    def __init__(self, *args, **kwargs):
-        import warnings
-
-        warnings.warn(
-            "The `VirtualArray` class is deprecated and will be removed in a future release of Awkward Array. "
-            "Please plan to migrate your code to use the `VirtualNDArray` class instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        super().__init__(*args, **kwargs)
