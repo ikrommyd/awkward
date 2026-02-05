@@ -37,50 +37,49 @@ jobs:
         runs-on:
           - windows-latest
           - ubuntu-latest
-          - macos-14
+          - ubuntu-24.04-arm
+          - macos-latest
         python-version:
           - '3.14'
-          - '3.13'
-          - '3.12'
-          - '3.11'
           - '3.10'
-          - '3.9'
         python-architecture:
-          - x64
+          - '' # use default arch
         dependencies-kind:
           - full
-        exclude:
-          - runs-on: macos-14
-            python-architecture: x64
         include:
-          - runs-on: macos-14
+          - python-version: '3.14'
             python-architecture: arm64
+            runs-on: macos-14
             dependencies-kind: full
-          - python-version: '3.9'
+          - python-version: '3.14'
+            python-architecture: x64
+            runs-on: macos-15-intel
+            dependencies-kind: basic
+          - python-version: '3.10'
             python-architecture: x86
             runs-on: windows-latest
             dependencies-kind: full
-          - python-version: '3.9'
+          - python-version: '3.10'
             python-architecture: x86
             runs-on: windows-latest
             dependencies-kind: numpy1
-          - python-version: '3.9'
+          - python-version: '3.10'
             python-architecture: x64
             runs-on: ubuntu-latest
             dependencies-kind: minimal
-          - python-version: 'pypy3.9'
-            python-architecture: x64
-            runs-on: ubuntu-latest
-            dependencies-kind: pypy
           - python-version: '3.11'
-            python-architecture: x64
-            runs-on: ubuntu-latest
+            python-architecture: arm64
+            runs-on: macos-14
             dependencies-kind: ml
-          - python-version: '3.13t'
+          - python-version: '3.14t'
             python-architecture: x64
             runs-on: ubuntu-latest
             dependencies-kind: nogil
-          - python-version: '3.13t'
+          - python-version: '3.14t'
+            python-architecture: arm64
+            runs-on: macos-14
+            dependencies-kind: nogil
+          - python-version: '3.14t'
             python-architecture: x64
             runs-on: windows-latest
             dependencies-kind: nogil
@@ -107,7 +106,7 @@ jobs:
 
       - name: Cache awkward-cpp wheel
         id: cache-awkward-cpp-wheel
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: awkward-cpp/dist
           key: ${{ github.job }}-${{ matrix.runs-on }}-${{ matrix.python-version }}-${{ matrix.python-architecture }}-${{ hashFiles('awkward-cpp/**') }}
@@ -161,14 +160,17 @@ jobs:
           --cov-report=xml
         if: startsWith(matrix.python-version, '3.')
 
-      - name: Test non-kernels (PyPy)
-        run: >-
-          python -m pytest -vv -rs tests
-        if: startsWith(matrix.python-version, 'pypy')
+      - name: Test non-kernels (Python) in multiple threads
+        if: matrix.python-version == '3.14t'
+        run: |
+          python -m pip install 'pytest-run-parallel>=0.8.2'
+          python -m pytest -vv -rs tests --parallel-threads 4 --ignore=tests/test_3364_virtualarray.py --ignore=tests/test_3451_virtualarray_with_jax.py --ignore=tests/test_3475_virtualarray_unknown_length.py
 
       - name: Upload Codecov results
-        if: (matrix.python-version == '3.9') && (matrix.runs-on == 'ubuntu-latest')
+        if: (matrix.python-version == '3.10') && (matrix.runs-on == 'ubuntu-latest')
         uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   run-gpu-tests:
     name: Run GPU Tests
@@ -209,6 +211,7 @@ jobs:
             -c rapidsai
             -c nvidia
             python=3.13
+            cccl-python
             cudf
             cupy
             cuda-version=${{ matrix.cuda-version }}
@@ -222,7 +225,7 @@ jobs:
 
       - name: Cache awkward-cpp wheel
         id: cache-awkward-cpp-wheel
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: awkward-cpp/dist
           key: ${{ github.job }}-${{ hashFiles('awkward-cpp/**') }}
@@ -286,9 +289,9 @@ jobs:
           # Cache invalidates daily by default
           cache-environment: true
           environment-name: awkward
-          # Need Python 3.9 for the cached wheels
+          # Need Python 3.10 for the cached wheels
           create-args: >-
-            python=3.9
+            python=3.10
             numpy
             root
 
@@ -297,7 +300,7 @@ jobs:
 
       - name: Cache awkward-cpp wheel
         id: cache-awkward-cpp-wheel
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ./awkward-cpp/dist
           key: ${{ github.job }}-${{ hashFiles('awkward-cpp/**') }}
@@ -344,7 +347,7 @@ jobs:
 
       - name: Cache awkward-cpp wheel
         id: cache-awkward-cpp-wheel
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ./awkward-cpp/dist
           key: ${{ github.job }}-${{ hashFiles('awkward-cpp/**') }}
