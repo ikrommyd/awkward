@@ -1263,9 +1263,8 @@ def test_0093_simplify_uniontypes_and_optiontypes_mask_as_bool():
     array = ak.operations.from_iter(
         ["one", "two", None, "three", None, None, "four"], highlevel=False
     )
-    index2 = ak.index.Index64(np.array([2, 2, 1, 5, 0], dtype=np.int64))
     cuda_array = ak.to_backend(array, "cuda", highlevel=False)
-    cuda_index2 = ak.to_backend(index2, "cuda", highlevel=False)
+    cuda_index2 = ak.index.Index64(cp.array([2, 2, 1, 5, 0], dtype=np.int64))
 
     cuda_array2 = ak.contents.IndexedArray.simplified(cuda_index2, cuda_array)
 

@@ -11,6 +11,6 @@ def test_wrap_index_cupy():
     cp = pytest.importorskip("cupy")
     data = cp.arange(10, dtype=cp.int64)
     index = ak.index.Index64(data)
-    other_data = cp.asarray(index)
+    other_data = cp.asarray(index.data)
     result = cp.shares_memory(data, other_data)
     assert result is True

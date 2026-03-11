@@ -177,23 +177,6 @@ class Index:
     def __len__(self) -> int:
         return int(self.length)
 
-    @property
-    def __cuda_array_interface__(self):
-        return self._data.__cuda_array_interface__  # type: ignore[attr-defined]
-
-    @property
-    def __array_interface__(self):
-        return self._data.__array_interface__  # type: ignore[attr-defined]
-
-    def __dlpack_device__(self) -> tuple[int, int]:
-        return self._data.__dlpack_device__()  # type: ignore[attr-defined]
-
-    def __dlpack__(self, stream: Any = None) -> Any:
-        if stream is None:
-            return self._data.__dlpack__()  # type: ignore[attr-defined]
-        else:
-            return self._data.__dlpack__(stream=stream)  # type: ignore[attr-defined]
-
     def __repr__(self) -> str:
         return self._repr("", "", "")
 

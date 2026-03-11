@@ -10,7 +10,7 @@ import awkward as ak
 def test_wrap_index_numpy():
     data = np.arange(10, dtype=np.int64)
     index = ak.index.Index64(data)
-    other_data = np.asarray(index)
+    other_data = np.asarray(index.data)
     assert np.shares_memory(data, other_data)
 
 
