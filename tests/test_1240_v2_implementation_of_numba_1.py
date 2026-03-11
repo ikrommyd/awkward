@@ -66,6 +66,8 @@ def buffers(layout):
     if isinstance(layout, ak.contents.NumpyArray):
         yield layout.data
     for attr in dir(layout):
+        if "array_interface" in attr:
+            continue
         obj = getattr(layout, attr)
         if isinstance(obj, ak.index.Index):
             yield obj.data

@@ -311,6 +311,39 @@ class Content(Meta):
             "do not try to convert low-level layouts (Content subclasses) into NumPy arrays; put them in ak.highlevel.Array"
         )
 
+    def __cupy_get_ndarray__(self):
+        raise TypeError(
+            "do not try to convert low-level layouts (Content subclasses) into CuPy arrays; put them in ak.highlevel.Array"
+        )
+
+    def __jax_array__(self):
+
+        raise TypeError(
+            "do not try to convert low-level layouts (Content subclasses) into Jax arrays; put them in ak.highlevel.Array"
+        )
+
+    @property
+    def __array_interface__(self):
+        raise TypeError(
+            "do not try to convert low-level layouts (Content subclasses) into NumPy arrays; put them in ak.highlevel.Array"
+        )
+
+    @property
+    def __cuda_array_interface__(self):
+        raise TypeError(
+            "do not try to convert low-level layouts (Content subclasses) into CuPy arrays; put them in ak.highlevel.Array"
+        )
+
+    def __dlpack_device__(self):
+        raise TypeError(
+            "do not try to convert low-level layouts (Content subclasses) into DLPack arrays; put them in ak.highlevel.Array"
+        )
+
+    def __dlpack__(self, stream=None):
+        raise TypeError(
+            "do not try to convert low-level layouts (Content subclasses) into DLPack arrays; put them in ak.highlevel.Array"
+        )
+
     def __iter__(self):
         if not self._backend.nplike.known_data:
             raise TypeError("cannot iterate on an array without concrete data")
