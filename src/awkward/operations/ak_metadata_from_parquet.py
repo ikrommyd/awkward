@@ -84,9 +84,17 @@ def _impl(
         scan_files,
         calculate_uuid=True,
     )
-    parquet_columns, subform, actual_paths, fs, _subrg, col_counts, _metadata, uuid = (
-        results
-    )
+    (
+        parquet_columns,
+        subform,
+        actual_paths,
+        fs,
+        _subrg,
+        col_counts,
+        _metadata,
+        uuid,
+        _target_schema,
+    ) = results
 
     out = {
         "form": subform,

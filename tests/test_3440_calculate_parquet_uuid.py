@@ -39,7 +39,7 @@ def test_return_tuple_with_or_without_uuid(calculate_uuid):
         calculate_uuid=calculate_uuid,
     )
     if calculate_uuid:
-        assert len(results) == 8, "Expected 8 items in the result tuple"
+        assert len(results) == 9, "Expected 9 items in the result tuple"
         (
             _parquet_columns,
             _subform,
@@ -49,11 +49,12 @@ def test_return_tuple_with_or_without_uuid(calculate_uuid):
             _col_counts,
             _metadata,
             uuid,
+            _target_schema,
         ) = results
         assert uuid is not None, "UUID should be present when calculate_uuid is True"
         print("uuid:", uuid)
     else:
-        assert len(results) == 7, "Expected 7 items in the result tuple"
+        assert len(results) == 8, "Expected 8 items in the result tuple"
         (
             _parquet_columns,
             _subform,
@@ -62,4 +63,5 @@ def test_return_tuple_with_or_without_uuid(calculate_uuid):
             _subrg,
             _col_counts,
             _metadata,
+            _target_schema,
         ) = results

@@ -68,9 +68,17 @@ def from_parquet(
     See also #ak.to_parquet, #ak.metadata_from_parquet.
     """
 
-    parquet_columns, subform, actual_paths, fs, subrg, _row_counts, _meta, _uuid = (
-        metadata(path, storage_options, row_groups, columns, calculate_uuid=True)
-    )
+    (
+        parquet_columns,
+        subform,
+        actual_paths,
+        fs,
+        subrg,
+        _row_counts,
+        _meta,
+        _uuid,
+        target_schema,
+    ) = metadata(path, storage_options, row_groups, columns, calculate_uuid=True)
     return _load(
         actual_paths,
         parquet_columns if columns is not None else None,
@@ -84,6 +92,7 @@ def from_parquet(
         behavior,
         fs,
         attrs,
+        target_schema=target_schema,
     )
 
 
@@ -129,19 +138,13 @@ def metadata(
             list_indicator = "list.element"
             break
 
-    subform = ak._connect.pyarrow.form_handle_arrow(
-        parquetfile_for_metadata.schema_arrow, pass_empty_field=True
-    )
-    if columns is not None:
-        subform = subform.select_columns(columns)
-
-    # Handle empty field at root
-    if parquetfile_for_metadata.schema_arrow.names == [""]:
-        column_prefix = ("",)
-    else:
-        column_prefix = ()
-
     metadata = parquetfile_for_metadata.metadata
+    schema_for_form = parquetfile_for_metadata.schema_arrow
+    schemas_match = True
+    # Track per-file (path, metadata, schema_arrow) for the schemas-mismatch fallback.
+    file_metadata_list = [
+        (path_for_schema, metadata, parquetfile_for_metadata.schema_arrow)
+    ]
     if scan_files and not path_for_schema.endswith("/_metadata"):
         if path_for_schema in all_paths:
             scan_paths = all_paths[1:]
@@ -149,44 +152,106 @@ def metadata(
             scan_paths = all_paths
         for apath in scan_paths:
             with fs.open(apath, "rb") as f:
-                md = pyarrow_parquet.ParquetFile(f).metadata
+                pf = pyarrow_parquet.ParquetFile(f)
+                md = pf.metadata
                 # TODO: not nested directory structure yet
                 md.set_file_path(apath.rsplit("/", 1)[-1])
-                metadata.append_row_groups(md)
+                file_metadata_list.append((apath, md, pf.schema_arrow))
+                if schemas_match:
+                    try:
+                        metadata.append_row_groups(md)
+                    except RuntimeError as exc:
+                        # Schemas across files differ. Fall back to building a
+                        # union schema and reading each file with its own columns.
+                        if "AppendRowGroups requires equal schemas" in str(exc):
+                            schemas_match = False
+                        else:
+                            raise
+
+    if not schemas_match:
+        pyarrow = awkward._connect.pyarrow.import_pyarrow("ak.from_parquet")
+        schema_for_form = _make_schema_nullable(
+            pyarrow.unify_schemas([s for _, _, s in file_metadata_list]),
+            pyarrow,
+        )
+
+    subform = ak._connect.pyarrow.form_handle_arrow(
+        schema_for_form, pass_empty_field=True
+    )
+    if columns is not None:
+        subform = subform.select_columns(columns)
+
+    # Handle empty field at root
+    if schema_for_form.names == [""]:
+        column_prefix = ("",)
+    else:
+        column_prefix = ()
+
     if row_groups is not None:
-        if any(_ >= metadata.num_row_groups for _ in row_groups):
+        if schemas_match:
+            total_row_groups = metadata.num_row_groups
+        else:
+            total_row_groups = sum(md.num_row_groups for _, md, _ in file_metadata_list)
+        if any(_ >= total_row_groups for _ in row_groups):
             raise ValueError(
-                f"Row group selection out of bounds 0..{metadata.num_row_groups - 1}"
+                f"Row group selection out of bounds 0..{total_row_groups - 1}"
             )
         if not can_sub:
             raise TypeError(
                 "Requested selection of row-groups, but not scanning metadata"
             )
 
-        path_rgs = {}
-        rgs_path = {}
-        subrg = []
-        col_counts = []
-        for i in range(metadata.num_row_groups):
-            fp = metadata.row_group(i).column(0).file_path
-            path_rgs.setdefault(fp, []).append(i)
-            rgs_path[i] = fp
+        if schemas_match:
+            path_rgs = {}
+            rgs_path = {}
+            subrg = []
+            col_counts = []
+            for i in range(metadata.num_row_groups):
+                fp = metadata.row_group(i).column(0).file_path
+                path_rgs.setdefault(fp, []).append(i)
+                rgs_path[i] = fp
 
-        actual_paths = []
-        for select in row_groups:
-            path = rgs_path[select]
-            path2 = next(_ for _ in all_paths if _.endswith(path))
-            if path2 not in actual_paths:
-                actual_paths.append(path2)
-                subrg.append([path_rgs[path].index(select)])
-            else:
-                subrg[-1].append(path_rgs[path].index(select))
-            col_counts.append(metadata.row_group(select).num_rows)
+            actual_paths = []
+            for select in row_groups:
+                path = rgs_path[select]
+                path2 = next(_ for _ in all_paths if _.endswith(path))
+                if path2 not in actual_paths:
+                    actual_paths.append(path2)
+                    subrg.append([path_rgs[path].index(select)])
+                else:
+                    subrg[-1].append(path_rgs[path].index(select))
+                col_counts.append(metadata.row_group(select).num_rows)
+        else:
+            # Build a flat list mapping global row group index -> (path, local_idx, num_rows)
+            global_rgs = []
+            for fp, md, _ in file_metadata_list:
+                for local_i in range(md.num_row_groups):
+                    global_rgs.append((fp, local_i, md.row_group(local_i).num_rows))
+
+            actual_paths = []
+            subrg = []
+            col_counts = []
+            for select in row_groups:
+                fp, local_idx, num_rows = global_rgs[select]
+                if fp in actual_paths:
+                    idx = actual_paths.index(fp)
+                    subrg[idx].append(local_idx)
+                else:
+                    actual_paths.append(fp)
+                    subrg.append([local_idx])
+                col_counts.append(num_rows)
     else:
         if can_sub:
-            col_counts = [
-                metadata.row_group(i).num_rows for i in range(metadata.num_row_groups)
-            ]
+            if schemas_match:
+                col_counts = [
+                    metadata.row_group(i).num_rows
+                    for i in range(metadata.num_row_groups)
+                ]
+            else:
+                col_counts = []
+                for _, md, _ in file_metadata_list:
+                    for i in range(md.num_row_groups):
+                        col_counts.append(md.row_group(i).num_rows)
         else:
             col_counts = None
 
@@ -194,12 +259,40 @@ def metadata(
         list_indicator=list_indicator, column_prefix=column_prefix
     )
 
+    # When schemas differ between files we need a target schema so that each
+    # file's table can be aligned (missing fields filled with nulls) before
+    # concatenation.
+    target_schema = None
+    if not schemas_match:
+        pyarrow_module = awkward._connect.pyarrow.import_pyarrow("ak.from_parquet")
+        if columns is not None:
+            target_schema = _project_schema(
+                schema_for_form, parquet_columns, pyarrow_module
+            )
+        else:
+            target_schema = schema_for_form
+        subform = ak._connect.pyarrow.form_handle_arrow(
+            target_schema, pass_empty_field=True
+        )
+        parquet_columns = subform.columns(
+            list_indicator=list_indicator, column_prefix=column_prefix
+        )
+
     # generate hash from the col_counts, first row_group and last row_group to calculate approximate parquet uuid
     uuid = None
     if calculate_uuid:
         uuids = [repr({"col_counts": col_counts})]
-        for row_group_index in (0, metadata.num_row_groups - 1):
-            row_group_info = metadata.row_group(row_group_index).to_dict()
+        if schemas_match:
+            uuid_row_groups = [(metadata, 0), (metadata, metadata.num_row_groups - 1)]
+        else:
+            first_md = file_metadata_list[0][1]
+            last_md = file_metadata_list[-1][1]
+            uuid_row_groups = [
+                (first_md, 0),
+                (last_md, last_md.num_row_groups - 1),
+            ]
+        for md_obj, row_group_index in uuid_row_groups:
+            row_group_info = md_obj.row_group(row_group_index).to_dict()
             for k, v in row_group_info.items():
                 # sorting columns, and columns::statistics have some version skew in underlying library
                 # with latter's 'distinct_counts' showing None vs 0 for example, so they're not used
@@ -229,9 +322,19 @@ def metadata(
             col_counts,
             metadata,
             uuid,
+            target_schema,
         )
 
-    return parquet_columns, subform, actual_paths, fs, subrg, col_counts, metadata
+    return (
+        parquet_columns,
+        subform,
+        actual_paths,
+        fs,
+        subrg,
+        col_counts,
+        metadata,
+        target_schema,
+    )
 
 
 def _load(
@@ -248,6 +351,7 @@ def _load(
     fs,
     attrs,
     metadata=None,
+    target_schema=None,
 ):
     arrays = []
     for i, p in enumerate(actual_paths):
@@ -262,6 +366,7 @@ def _load(
                 footer_sample_size=footer_sample_size,
                 generate_bitmasks=generate_bitmasks,
                 metadata=metadata,
+                target_schema=target_schema,
             )
         )
 
@@ -313,8 +418,11 @@ def _read_parquet_file(
     max_block,
     generate_bitmasks,
     metadata=None,
+    target_schema=None,
 ):
     pyarrow_parquet = awkward._connect.pyarrow.import_pyarrow_parquet("ak.from_parquet")
+    if target_schema is not None:
+        parquet_columns = [field.name for field in target_schema]
 
     with _open_file(
         path,
@@ -333,6 +441,9 @@ def _read_parquet_file(
         else:
             arrow_table = parquetfile.read_row_groups(row_groups, parquet_columns)
 
+    if target_schema is not None:
+        arrow_table = _align_table_to_schema(arrow_table, target_schema)
+
     arrow_table = ak._connect.pyarrow.convert_native_arrow_table_to_awkward(arrow_table)
     return ak.operations.ak_from_arrow._impl(
         arrow_table,
@@ -342,6 +453,143 @@ def _read_parquet_file(
         None,
         None,
     )
+
+
+def _align_table_to_schema(arrow_table, target_schema):
+    """Align an Arrow table to a target schema by adding null columns for any
+    top-level fields present in `target_schema` but missing from `arrow_table`.
+
+    The returned table has the columns of `target_schema`, in the same order,
+    each promoted to the target field's type. This lets us concatenate tables
+    read from files with non-identical schemas.
+    """
+    pyarrow_module = awkward._connect.pyarrow.import_pyarrow("ak.from_parquet")
+    existing = set(arrow_table.column_names)
+    arrays = []
+    for field in target_schema:
+        if field.name in existing:
+            arrays.append(arrow_table.column(field.name))
+        else:
+            arrays.append(pyarrow_module.nulls(arrow_table.num_rows, type=field.type))
+    return pyarrow_module.Table.from_arrays(arrays, schema=target_schema)
+
+
+def _make_schema_nullable(schema, pyarrow_module):
+    # The unified schema may contain stale Awkward metadata from only one input
+    # schema. Let Arrow-to-Awkward conversion infer the unioned schema instead.
+    return pyarrow_module.schema(
+        [_make_field_nullable(field, pyarrow_module) for field in schema]
+    )
+
+
+def _make_field_nullable(field, pyarrow_module):
+    return pyarrow_module.field(
+        field.name,
+        _make_type_nullable(field.type, pyarrow_module),
+        nullable=True,
+    )
+
+
+def _make_type_nullable(arrow_type, pyarrow_module):
+    if pyarrow_module.types.is_struct(arrow_type):
+        return pyarrow_module.struct(
+            [_make_field_nullable(field, pyarrow_module) for field in arrow_type]
+        )
+    elif pyarrow_module.types.is_list(arrow_type):
+        return pyarrow_module.list_(
+            arrow_type.value_field.with_type(
+                _make_type_nullable(arrow_type.value_type, pyarrow_module)
+            ).with_nullable(True)
+        )
+    elif pyarrow_module.types.is_large_list(arrow_type):
+        return pyarrow_module.large_list(
+            arrow_type.value_field.with_type(
+                _make_type_nullable(arrow_type.value_type, pyarrow_module)
+            ).with_nullable(True)
+        )
+    elif pyarrow_module.types.is_fixed_size_list(arrow_type):
+        return pyarrow_module.list_(
+            arrow_type.value_field.with_type(
+                _make_type_nullable(arrow_type.value_type, pyarrow_module)
+            ).with_nullable(True),
+            list_size=arrow_type.list_size,
+        )
+    else:
+        return arrow_type
+
+
+def _project_schema(schema, parquet_columns, pyarrow_module):
+    projection = {}
+    for column in parquet_columns:
+        cursor = projection
+        for part in column.split("."):
+            if part == "":
+                continue
+            cursor = cursor.setdefault(part, {})
+
+    fields = []
+    for field in schema:
+        if field.name in projection:
+            next_field = _project_field(field, projection[field.name], pyarrow_module)
+            if next_field is not None:
+                fields.append(next_field)
+    return pyarrow_module.schema(fields)
+
+
+def _project_field(field, projection, pyarrow_module):
+    if not projection:
+        return field
+
+    next_type = _project_type(field.type, projection, pyarrow_module)
+    if next_type is None:
+        return None
+    else:
+        return pyarrow_module.field(
+            field.name, next_type, nullable=field.nullable, metadata=field.metadata
+        )
+
+
+def _project_type(arrow_type, projection, pyarrow_module):
+    if pyarrow_module.types.is_struct(arrow_type):
+        fields = []
+        for field in arrow_type:
+            if field.name in projection:
+                next_field = _project_field(
+                    field, projection[field.name], pyarrow_module
+                )
+                if next_field is not None:
+                    fields.append(next_field)
+        return pyarrow_module.struct(fields)
+    elif pyarrow_module.types.is_list(arrow_type):
+        value_projection = _list_value_projection(projection)
+        value_field = arrow_type.value_field.with_type(
+            _project_type(arrow_type.value_type, value_projection, pyarrow_module)
+        )
+        return pyarrow_module.list_(value_field)
+    elif pyarrow_module.types.is_large_list(arrow_type):
+        value_projection = _list_value_projection(projection)
+        value_field = arrow_type.value_field.with_type(
+            _project_type(arrow_type.value_type, value_projection, pyarrow_module)
+        )
+        return pyarrow_module.large_list(value_field)
+    elif pyarrow_module.types.is_fixed_size_list(arrow_type):
+        value_projection = _list_value_projection(projection)
+        value_field = arrow_type.value_field.with_type(
+            _project_type(arrow_type.value_type, value_projection, pyarrow_module)
+        )
+        return pyarrow_module.list_(value_field, list_size=arrow_type.list_size)
+    else:
+        return arrow_type
+
+
+def _list_value_projection(projection):
+    while len(projection) == 1:
+        ((key, value),) = projection.items()
+        if key in ("list", "item", "element"):
+            projection = value
+        else:
+            break
+    return projection
 
 
 class _DictOfEmptyBuffers:
