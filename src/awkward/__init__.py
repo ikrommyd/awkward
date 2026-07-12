@@ -53,6 +53,7 @@ behavior: dict = {}
 
 # operations
 from awkward.operations import *
+from awkward._dispatch import register_operation
 
 # filter out private modules starting with "_" and exclude "ak_" modules from src/awkward/operations
 __all__ = [

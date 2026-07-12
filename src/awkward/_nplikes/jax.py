@@ -20,6 +20,8 @@ class Jax(ArrayModuleNumpyLike):
     is_eager: Final = True
     supports_structured_dtypes: Final = False
     supports_virtual_arrays: Final = True
+    supports_inplace_mutation: Final = False
+    supports_nonprimitive_dtypes: Final = True
 
     def __init__(self):
         warnings.warn(
@@ -188,6 +190,10 @@ class Jax(ArrayModuleNumpyLike):
             bytes_arr = lax.bitcast_convert_type(x, np.uint8)
             bytes_arr = lax.rev(bytes_arr, [x.ndim])
             return lax.bitcast_convert_type(bytes_arr, dtype)
+
+    def set_index_slice(self, x: ArrayLike, where: object, value: object) -> ArrayLike:
+        x, where, value = maybe_materialize(x, where, value)
+        return x.at[where].set(value)  # type: ignore[attr-defined]
 
     def memory_ptr(self, x: ArrayLike) -> int:
         (x,) = maybe_materialize(x)

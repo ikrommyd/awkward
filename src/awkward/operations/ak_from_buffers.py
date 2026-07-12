@@ -10,7 +10,6 @@ from awkward._backends.dispatch import regularize_backend
 from awkward._dispatch import high_level_function
 from awkward._layout import wrap_layout
 from awkward._nplikes.array_like import ArrayLike
-from awkward._nplikes.jax import Jax
 from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import NumpyLike, NumpyMetadata
 from awkward._nplikes.placeholder import PlaceholderArray
@@ -277,12 +276,12 @@ def _from_buffer(
         return PlaceholderArray(nplike, (count,), dtype, buffer_key)
     elif isinstance(buffer, PlaceholderArray) or nplike.is_own_array(buffer):
         # Require 1D buffers
-        copy = None if isinstance(nplike, Jax) else False  # Jax can not avoid this
+        copy = None if not nplike.supports_inplace_mutation else False
         array = nplike.reshape(buffer.view(dtype), shape=(-1,), copy=copy)
         array = ak._util.native_to_byteorder(array, byteorder)
 
         # we can't compare with count or slice when we're working with tracers
-        if not (isinstance(nplike, Jax) and nplike.is_currently_tracing()):
+        if not nplike.is_currently_tracing():
             if array.size < count:
                 raise TypeError(
                     f"size of array ({array.size}) is less than size of form ({count})"

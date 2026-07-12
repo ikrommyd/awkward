@@ -9,7 +9,6 @@ from awkward._namedaxis import (
     _get_named_axis,
     _named_axis_to_positional_axis,
 )
-from awkward._nplikes.jax import Jax
 from awkward._nplikes.numpy_like import ArrayLike, NumpyMetadata
 from awkward._regularize import regularize_axis
 from awkward.errors import AxisError
@@ -120,14 +119,11 @@ def _impl(array, axis, highlevel, behavior, attrs):
                 indexedoption_index = nplike.arange(
                     tagged_content.length + 1, dtype=np.int64
                 )
-                if isinstance(nplike, Jax):
-                    indexedoption_index = indexedoption_index.at[
-                        nplike.shape_item_as_index(tagged_content.length)
-                    ].set(-1)
-                else:
-                    indexedoption_index[
-                        nplike.shape_item_as_index(tagged_content.length)
-                    ] = -1
+                indexedoption_index = nplike.set_index_slice(
+                    indexedoption_index,
+                    nplike.shape_item_as_index(tagged_content.length),
+                    -1,
+                )
                 field_contents[tag_for_missing] = (
                     ak.contents.IndexedOptionArray.simplified(
                         ak.index.Index64(indexedoption_index), tagged_content
@@ -147,23 +143,18 @@ def _impl(array, axis, highlevel, behavior, attrs):
 
                 if content.has_field(field):
                     # Rewrite tags to account for missing fields
-                    if isinstance(nplike, Jax):
-                        field_tags = field_tags.at[tag_is_j].set(k)
-                    else:
-                        field_tags[tag_is_j] = k
+                    field_tags = nplike.set_index_slice(field_tags, tag_is_j, k)
                     k += 1
 
                 else:
-                    if isinstance(nplike, Jax):
-                        # Rewrite tags to point to option content
-                        field_tags = field_tags.at[tag_is_j].set(tag_for_missing)
-                        # Point each value to missing value
-                        field_index = field_index.at[tag_is_j].set(index_missing)
-                    else:
-                        # Rewrite tags to point to option content
-                        field_tags[tag_is_j] = tag_for_missing
-                        # Point each value to missing value
-                        field_index[tag_is_j] = index_missing
+                    # Rewrite tags to point to option content
+                    field_tags = nplike.set_index_slice(
+                        field_tags, tag_is_j, tag_for_missing
+                    )
+                    # Point each value to missing value
+                    field_index = nplike.set_index_slice(
+                        field_index, tag_is_j, index_missing
+                    )
 
             outer_field_contents.append(
                 ak.contents.UnionArray.simplified(
@@ -183,20 +174,15 @@ def _impl(array, axis, highlevel, behavior, attrs):
         num_none = layout.backend.nplike.count_nonzero(is_none)
         dense_index = layout.backend.nplike.empty(index.size, dtype=index.dtype)
 
-        if isinstance(layout.backend.nplike, Jax):
-            dense_index = dense_index.at[is_none].set(-1)
-            dense_index = dense_index.at[~is_none].set(
-                layout.backend.nplike.arange(
-                    index.size - num_none,
-                    dtype=index.dtype,
-                )
-            )
-        else:
-            dense_index[is_none] = -1
-            dense_index[~is_none] = layout.backend.nplike.arange(
+        dense_index = layout.backend.nplike.set_index_slice(dense_index, is_none, -1)
+        dense_index = layout.backend.nplike.set_index_slice(
+            dense_index,
+            ~is_none,
+            layout.backend.nplike.arange(
                 index.size - num_none,
                 dtype=index.dtype,
-            )
+            ),
+        )
         return dense_index
 
     def apply(layout, depth, backend, **kwargs):

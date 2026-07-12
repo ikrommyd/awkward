@@ -10,7 +10,6 @@ from awkward._namedaxis import (
     _get_named_axis,
     _named_axis_to_positional_axis,
 )
-from awkward._nplikes.jax import Jax
 from awkward._nplikes.numpy_like import NumpyMetadata
 from awkward._nplikes.shape import unknown_length
 from awkward._nplikes.typetracer import is_unknown_scalar
@@ -162,16 +161,11 @@ def _impl(array, counts, axis, highlevel, behavior, attrs):
         current_offsets = maybe_counts_layout.backend.nplike.empty(
             counts.size + 1, dtype=np.int64
         )
-        if isinstance(maybe_counts_layout.backend.nplike, Jax):
-            current_offsets = current_offsets.at[0].set(0)
-            current_offsets = current_offsets.at[1:].set(
-                maybe_counts_layout.backend.nplike.cumsum(counts)
-            )
-        else:
-            current_offsets[0] = 0
-            maybe_counts_layout.backend.nplike.cumsum(
-                counts, maybe_out=current_offsets[1:]
-            )
+        nplike = maybe_counts_layout.backend.nplike
+        current_offsets = nplike.set_index_slice(current_offsets, 0, 0)
+        current_offsets = nplike.set_index_slice(
+            current_offsets, slice(1, None), nplike.cumsum(counts)
+        )
 
     def unflatten_this_layout(layout):
         nonlocal current_offsets

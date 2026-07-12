@@ -15,7 +15,6 @@ from awkward._meta.numpymeta import NumpyMeta
 from awkward._nplikes import to_nplike
 from awkward._nplikes.array_like import ArrayLike, maybe_materialize
 from awkward._nplikes.cupy import Cupy
-from awkward._nplikes.jax import Jax
 from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import IndexType, NumpyMetadata
 from awkward._nplikes.placeholder import PlaceholderArray
@@ -121,7 +120,7 @@ class NumpyArray(NumpyMeta, Content):
 
         self._data = backend.nplike.asarray(data)
 
-        if not isinstance(backend.nplike, Jax):
+        if not backend.nplike.supports_nonprimitive_dtypes:
             ak.types.numpytype.dtype_to_primitive(self._data.dtype)
 
         if len(ak._util.maybe_shape_of(self._data)) == 0:

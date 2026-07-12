@@ -9,6 +9,7 @@ import weakref
 
 import awkward as ak
 from awkward import highlevel
+from awkward._behavior import register_behavior_subclass_hook
 from awkward._nplikes.numpy import Numpy
 from awkward._typing import TypeVar
 
@@ -101,6 +102,9 @@ def register_behavior_class(cls: HighLevelType):
             jax_connect.register_pytree_class(cls)
         else:
             _known_highlevel_classes.add(cls)
+
+
+register_behavior_subclass_hook(register_behavior_class)
 
 
 def _register():

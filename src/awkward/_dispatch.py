@@ -16,18 +16,37 @@ HighLevelType: TypeAlias = Callable[P, T]
 
 
 def high_level_function(
-    module: str = "ak", name: str | None = None
+    module: str = "ak", name: str | None = None, register: bool = False
 ) -> Callable[[DispatcherType[P, T]], HighLevelType[P, T]]:
-    """Decorate a high-level function such that it may be overloaded by third-party array objects"""
+    """Decorate a high-level function such that it may be overloaded by third-party array objects.
+
+    If ``register`` is True, the function is also registered into the ``awkward``
+    namespace under ``name``, so that third-party packages can supply their own
+    operations (e.g. ``ak.to_jax`` from an external backend package).
+    """
 
     def capture_func(func: DispatcherType) -> HighLevelType:
         if name is None:
             captured_name = func.__qualname__
         else:
             captured_name = name
-        return named_high_level_function(func, f"{module}.{captured_name}")
+        dispatch = named_high_level_function(func, f"{module}.{captured_name}")
+        if register:
+            register_operation(dispatch, captured_name)
+        return dispatch
 
     return capture_func
+
+
+def register_operation(func: HighLevelType, name: str | None = None) -> None:
+    """Register a high-level function into the ``awkward`` namespace, making it
+    accessible as ``ak.<name>`` (and ``ak.operations.<name>``)."""
+    import awkward
+
+    if name is None:
+        name = func.__name__
+    setattr(awkward, name, func)
+    setattr(awkward.operations, name, func)
 
 
 def named_high_level_function(

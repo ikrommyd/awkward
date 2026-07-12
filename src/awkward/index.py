@@ -7,9 +7,7 @@ import copy
 import awkward as ak
 from awkward._nplikes import to_nplike
 from awkward._nplikes.array_like import ArrayLike, maybe_materialize
-from awkward._nplikes.cupy import Cupy
 from awkward._nplikes.dispatch import nplike_of_obj
-from awkward._nplikes.jax import Jax
 from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import NumpyLike, NumpyMetadata
 from awkward._nplikes.shape import ShapeItem
@@ -250,21 +248,25 @@ class Index:
 
         if hasattr(out, "shape") and len(out.shape) != 0:
             return Index(out, metadata=self.metadata, nplike=self._nplike)
-        elif (Jax.is_own_array(out) or Cupy.is_own_array(out)) and len(out.shape) == 0:
+        elif (
+            self._nplike.known_data
+            and self._nplike.is_own_array(out)
+            and len(out.shape) == 0
+        ):
+            # backends with known data (e.g. JAX, CuPy) return a 0-d array from a
+            # scalar index; reduce it to a Python scalar. NumPy already returns a
+            # scalar here, and the typetracer has no data to realise.
             return out.item()
         else:
             return out
 
     def __setitem__(self, where, what):
         (data, where, what) = maybe_materialize(self._data, where, what)
-        if isinstance(self._nplike, Jax):
-            new_data = data.at[where].set(what)
-            if isinstance(self._data, VirtualNDArray):
-                self._data._array = new_data
-            else:
-                self._data = new_data
+        new_data = self._nplike.set_index_slice(data, where, what)
+        if isinstance(self._data, VirtualNDArray):
+            self._data._array = new_data
         else:
-            self._data[where] = what
+            self._data = new_data
 
     def to64(self) -> Index:
         return Index(self._nplike.astype(self._data, dtype=np.int64))

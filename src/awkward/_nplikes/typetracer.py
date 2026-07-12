@@ -607,6 +607,8 @@ class TypeTracer(NumpyLike[TypeTracerArray]):
     is_eager: Final = True
     supports_structured_dtypes: Final = True
     supports_virtual_arrays: Final = False
+    supports_inplace_mutation: Final = True
+    supports_nonprimitive_dtypes: Final = False
 
     def apply_ufunc(
         self,
@@ -1406,6 +1408,18 @@ class TypeTracer(NumpyLike[TypeTracerArray]):
         assert isinstance(x, TypeTracerArray)
         try_touch_data(x)
         return TypeTracerArray._new(x.dtype, shape=x.shape)
+
+    def set_index_slice(
+        self, x: TypeTracerArray, where: Any, value: Any
+    ) -> TypeTracerArray:
+        x[where] = value
+        return x
+
+    def is_currently_tracing(self) -> bool:
+        return False
+
+    def get_host_array(self, x: TypeTracerArray) -> Any:
+        return x
 
     ############################ ufuncs
 

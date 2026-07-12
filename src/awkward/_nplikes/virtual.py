@@ -358,10 +358,7 @@ class VirtualNDArray(NDArrayOperatorsMixin, MaterializableArray):
     def __setitem__(self, key, value):
         array = self.materialize()
         (value,) = maybe_materialize(value)
-        if isinstance(self._nplike, ak._nplikes.jax.Jax):
-            self._array = array.at[key].set(value)
-        else:
-            array.__setitem__(key, value)
+        self._array = self._nplike.set_index_slice(array, key, value)
 
     def __bool__(self) -> bool:
         array = self.materialize()

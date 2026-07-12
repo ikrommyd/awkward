@@ -21,7 +21,12 @@ import awkward._connect.hist
 from awkward._attrs import Attrs, attrs_of, without_transient_attrs
 from awkward._backends.dispatch import register_backend_lookup_factory
 from awkward._backends.numpy import NumpyBackend
-from awkward._behavior import behavior_of, get_array_class, get_record_class
+from awkward._behavior import (
+    behavior_of,
+    get_array_class,
+    get_record_class,
+    notify_behavior_subclass,
+)
 from awkward._layout import wrap_layout
 from awkward._namedaxis import (
     NAMED_AXIS_KEY,
@@ -370,7 +375,7 @@ class Array(NDArrayOperatorsMixin, Iterable, Sized):
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
 
-        ak.jax.register_behavior_class(cls)
+        notify_behavior_subclass(cls)
 
     _histogram_module_ = awkward._connect.hist
 
@@ -1918,7 +1923,7 @@ class Record(NDArrayOperatorsMixin):
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
 
-        ak.jax.register_behavior_class(cls)
+        notify_behavior_subclass(cls)
 
     def _update_class(self):
         self._numbaview = None

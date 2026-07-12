@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Collection
 
-import awkward as ak
 from awkward._backends.backend import Backend
 from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import NumpyLike, NumpyMetadata
@@ -25,6 +24,7 @@ BackendLookupFactory: TypeAlias = "Callable[[type[T]], BackendLookup[T]]"
 _type_to_backend_lookup: dict[type, BackendLookup] = {}
 _backend_lookup_factories: list[BackendLookupFactory] = []
 _name_to_backend_cls: dict[str, type[Backend]] = {}
+_nplike_cls_to_backend_cls: dict[type[NumpyLike], type[Backend]] = {}
 
 
 def register_backend_lookup_factory(factory: BackendLookupFactory):
@@ -43,6 +43,7 @@ def register_backend(primary_nplike_cls: type[NumpyLike]):
         register_backend_lookup_factory(lookup_factory)
 
         _name_to_backend_cls[backend_cls.name] = backend_cls
+        _nplike_cls_to_backend_cls[primary_nplike_cls] = backend_cls
 
         return backend_cls
 
@@ -143,15 +144,11 @@ def find_virtual_backend(obj: type):
     if issubclass(obj, VirtualNDArray):
 
         def finder(obj: VirtualNDArray):
-            if isinstance(obj.nplike, ak._nplikes.numpy.Numpy):
-                return _name_to_backend_cls["cpu"].instance()
-            elif isinstance(obj.nplike, ak._nplikes.cupy.Cupy):
-                return _name_to_backend_cls["cuda"].instance()
-            elif isinstance(obj.nplike, ak._nplikes.jax.Jax):
-                return _name_to_backend_cls["jax"].instance()
-            else:
+            backend_cls = _nplike_cls_to_backend_cls.get(type(obj.nplike))
+            if backend_cls is None:
                 raise TypeError(
                     f"The nplike {type(obj.nplike)} does not support virtual arrays"
                 )
+            return backend_cls.instance()
 
         return finder

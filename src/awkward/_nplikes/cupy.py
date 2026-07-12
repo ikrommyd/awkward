@@ -23,6 +23,8 @@ class Cupy(ArrayModuleNumpyLike):
     is_eager: Final = False
     supports_structured_dtypes: Final = False
     supports_virtual_arrays: Final = True
+    supports_inplace_mutation: Final = True
+    supports_nonprimitive_dtypes: Final = False
 
     def __init__(self):
         import awkward._connect.cuda  # noqa: F401
@@ -189,6 +191,10 @@ class Cupy(ArrayModuleNumpyLike):
         else:
             (x,) = maybe_materialize(x)
             return x.flags["C_CONTIGUOUS"]  # type: ignore[attr-defined]
+
+    def get_host_array(self, x: ArrayLike):
+        (x,) = maybe_materialize(x)
+        return x.get()  # type: ignore[attr-defined]
 
     def byteswap(self, x: ArrayLike) -> ArrayLike:
         if isinstance(x, VirtualNDArray):

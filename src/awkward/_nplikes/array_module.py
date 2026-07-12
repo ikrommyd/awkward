@@ -623,6 +623,16 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLikeT]):
     def byteswap(self, x: ArrayLikeT) -> ArrayLikeT:
         raise NotImplementedError
 
+    def set_index_slice(self, x: ArrayLikeT, where: Any, value: Any) -> ArrayLikeT:
+        x[where] = value
+        return x
+
+    def is_currently_tracing(self) -> bool:
+        return False
+
+    def get_host_array(self, x: ArrayLikeT) -> Any:
+        return x
+
     ############################ ufuncs
 
     def add(

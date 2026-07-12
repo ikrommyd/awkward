@@ -132,11 +132,25 @@ class NumpyLike(PublicSingleton, Protocol[ArrayLikeT]):
 
     @property
     @abstractmethod
+    def supports_nonprimitive_dtypes(self) -> bool: ...
+
+    @property
+    @abstractmethod
+    def supports_inplace_mutation(self) -> bool: ...
+
+    @property
+    @abstractmethod
     def known_data(self) -> bool: ...
 
     @property
     @abstractmethod
     def is_eager(self) -> bool: ...
+
+    @abstractmethod
+    def is_currently_tracing(self) -> bool: ...
+
+    @abstractmethod
+    def get_host_array(self, x: ArrayLikeT) -> Any: ...
 
     ############################ ndarray property that all the nplikes have
 
@@ -364,6 +378,9 @@ class NumpyLike(PublicSingleton, Protocol[ArrayLikeT]):
 
     @abstractmethod
     def byteswap(self, x: ArrayLikeT) -> ArrayLikeT: ...
+
+    @abstractmethod
+    def set_index_slice(self, x: ArrayLikeT, where: Any, value: Any) -> ArrayLikeT: ...
 
     ############################ ufuncs
 

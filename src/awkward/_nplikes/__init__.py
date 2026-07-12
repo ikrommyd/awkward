@@ -51,10 +51,7 @@ def to_nplike(
             "Converting from an nplike without known data to an nplike with known data is not supported"
         )
 
-    # Copy to host memory
-    if isinstance(from_nplike, awkward._nplikes.cupy.Cupy) and not isinstance(
-        nplike, awkward._nplikes.cupy.Cupy
-    ):
-        array = array.get()  # type: ignore[attr-defined]
+    # Copy to host memory (no-op for host backends)
+    array = from_nplike.get_host_array(array)
 
     return nplike.asarray(array)

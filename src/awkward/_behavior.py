@@ -18,6 +18,18 @@ if TYPE_CHECKING:
     from awkward.record import Record
 
 
+_behavior_subclass_hooks: list[Callable[[type], None]] = []
+
+
+def register_behavior_subclass_hook(hook: Callable[[type], None]) -> None:
+    _behavior_subclass_hooks.append(hook)
+
+
+def notify_behavior_subclass(cls: type) -> None:
+    for hook in _behavior_subclass_hooks:
+        hook(cls)
+
+
 def overlay_behavior(behavior: Mapping | None) -> Mapping:
     """
     Args:

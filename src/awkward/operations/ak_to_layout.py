@@ -13,8 +13,8 @@ import awkward as ak
 from awkward._backends.numpy import NumpyBackend
 from awkward._backends.typetracer import TypeTracerBackend
 from awkward._dispatch import high_level_function
-from awkward._nplikes.cupy import Cupy
-from awkward._nplikes.jax import Jax
+from awkward._layout import from_arraylib
+from awkward._nplikes.dispatch import nplike_of_obj
 from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import NumpyMetadata
 from awkward._nplikes.typetracer import TypeTracer
@@ -184,22 +184,9 @@ def _impl(
         return _handle_array_like(
             obj, promoted_layout, primitive_policy=primitive_policy
         )
-    elif Cupy.is_own_array(obj):
-        promoted_layout = ak.operations.from_cupy(
-            obj,
-            regulararray=regulararray,
-            highlevel=False,
-            primitive_policy=primitive_policy,
-        )
-        return _handle_array_like(
-            obj, promoted_layout, primitive_policy=primitive_policy
-        )
-    elif Jax.is_own_array(obj):
-        promoted_layout = ak.operations.from_jax(
-            obj,
-            regulararray=regulararray,
-            highlevel=False,
-            primitive_policy=primitive_policy,
+    elif (nplike := nplike_of_obj(obj, default=None)) is not None and nplike.known_data:
+        promoted_layout = from_arraylib(
+            obj, regulararray, False, primitive_policy=primitive_policy
         )
         return _handle_array_like(
             obj, promoted_layout, primitive_policy=primitive_policy
