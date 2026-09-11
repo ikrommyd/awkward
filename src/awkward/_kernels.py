@@ -6,11 +6,9 @@ from abc import abstractmethod
 from collections.abc import Callable
 from typing import Any
 
-import awkward as ak
 from awkward._nplikes.array_like import maybe_materialize
 from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import NumpyMetadata
-from awkward._nplikes.typetracer import try_touch_data
 from awkward._typing import Protocol, TypeAlias
 
 # Tuple[str, Unpack[Tuple[metadata.dtype, ...]]]
@@ -92,29 +90,4 @@ class NumpyKernel(BaseKernel):
 
         return self._impl(
             *(self._cast(x, t) for x, t in zip(args, self._impl.argtypes, strict=True))
-        )
-
-
-class TypeTracerKernelError(KernelError):
-    def __init__(self):
-        self.str = None
-        self.filename = None
-        self.attempt = ak._util.kSliceNone
-        self.id = ak._util.kSliceNone
-
-
-class TypeTracerKernel:
-    def __init__(self, index):
-        self._name_and_types = index
-
-    def __call__(self, *args) -> TypeTracerKernelError:
-        for arg in args:
-            try_touch_data(arg)
-        return TypeTracerKernelError()
-
-    def __repr__(self):
-        return "<{} {}{}>".format(
-            type(self).__name__,
-            self._name_and_types[0],
-            "".join(", " + str(metadata.dtype(x)) for x in self._name_and_types[1:]),
         )

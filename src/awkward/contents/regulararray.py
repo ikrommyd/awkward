@@ -52,7 +52,7 @@ numpy = Numpy.instance()
 
 def _calculate_regulararray_length(
     content: Content,
-    size: int | type[unknown_length],
+    size: int,
     zeros_length: int | type[unknown_length],
     materialize: bool = False,
 ) -> int | type[unknown_length]:
@@ -60,7 +60,7 @@ def _calculate_regulararray_length(
         length_of_content = content.length
     else:
         length_of_content = ak._util.maybe_length_of(content)
-    if length_of_content is unknown_length or size is unknown_length:
+    if length_of_content is unknown_length:
         length = unknown_length
     elif size != 0:
         length = content.length // size  # floor division
@@ -154,12 +154,7 @@ class RegularArray(RegularMeta[Content], Content):
             raise TypeError(
                 f"{type(self).__name__} 'content' must be a Content subtype, not {content!r}"
             )
-        if size is unknown_length:
-            if content.backend.nplike.known_data:
-                raise TypeError(
-                    f"{type(self).__name__} 'size' must be a non-negative integer for backends with known shapes, not None"
-                )
-        elif not (is_integer(size) and size >= 0):
+        if not (is_integer(size) and size >= 0):
             raise TypeError(
                 f"{type(self).__name__} 'size' must be a non-negative integer, not {size}"
             )
@@ -282,25 +277,9 @@ class RegularArray(RegularMeta[Content], Content):
         assert isinstance(form, self.form_cls)
         self._content._to_buffers(form.content, getkey, container, backend, byteorder)
 
-    def _to_typetracer(self, forget_length: bool) -> Self:
-        return RegularArray(
-            self._content._to_typetracer(forget_length),
-            self._size,
-            unknown_length if forget_length else self._length,
-            parameters=self._parameters,
-        )
-
-    def _touch_data(self, recursive: bool):
-        if recursive:
-            self._content._touch_data(recursive)
-
-    def _touch_shape(self, recursive: bool):
-        if recursive:
-            self._content._touch_shape(recursive)
-
     @property
     def length(self) -> ShapeItem:
-        if self._backend.nplike.known_data and self._length is unknown_length:
+        if self._length is unknown_length:
             zeros_length = unknown_length
             if self._zeros_length_generator:
                 zeros_length = self._zeros_length_generator()
@@ -370,9 +349,6 @@ class RegularArray(RegularMeta[Content], Content):
 
     def _getitem_range(self, start: IndexType, stop: IndexType) -> Content:
         nplike = self._backend.nplike
-        if not nplike.known_data:
-            self._touch_shape(recursive=False)
-            return self
 
         zeros_length = nplike.index_as_shape_item(stop - start)
         substart, substop = (
@@ -419,17 +395,16 @@ class RegularArray(RegularMeta[Content], Content):
             copied = True
 
         negative = where < 0
-        if self._backend.nplike.known_data:
-            if self._backend.nplike.any(negative):
-                if not copied:
-                    where = where.copy()
-                    copied = True
-                where[negative] += self.length
+        if self._backend.nplike.any(negative):
+            if not copied:
+                where = where.copy()
+                copied = True
+            where[negative] += self.length
 
-            if self._backend.nplike.any(where >= self.length):
-                raise ak._errors.index_error(self, where)
+        if self._backend.nplike.any(where >= self.length):
+            raise ak._errors.index_error(self, where)
 
-        if where.shape[0] is unknown_length or self._size is unknown_length:
+        if where.shape[0] is unknown_length:
             nextcarry = ak.index.Index64.empty(unknown_length, self._backend.nplike)
         else:
             nextcarry = ak.index.Index64.empty(
@@ -459,7 +434,7 @@ class RegularArray(RegularMeta[Content], Content):
 
     def _compact_offsets64(self, start_at_zero):
         nplike = self._backend.nplike
-        if self._size is not unknown_length and self._size == 0:
+        if self._size == 0:
             return ak.index.Index64.zeros(self.length + 1, nplike=nplike)
         else:
             return ak.index.Index64(
@@ -473,8 +448,6 @@ class RegularArray(RegularMeta[Content], Content):
             )
 
     def _broadcast_tooffsets64(self, offsets: Index) -> ListOffsetArray:
-        self._touch_data(recursive=False)
-        offsets._touch_data()
 
         nplike = self._backend.nplike
         assert offsets.nplike is nplike
@@ -482,7 +455,7 @@ class RegularArray(RegularMeta[Content], Content):
             raise AssertionError(
                 "broadcast_tooffsets64 can only be used with non-empty offsets"
             )
-        elif nplike.known_data and offsets[0] != 0:
+        elif offsets[0] != 0:
             raise AssertionError(
                 f"broadcast_tooffsets64 can only be used with offsets that start at 0, not {offsets[0]}"
             )
@@ -495,12 +468,11 @@ class RegularArray(RegularMeta[Content], Content):
                 f"cannot broadcast RegularArray of length {self.length} to length {offsets.length - 1}"
             )
 
-        if self._size is not unknown_length and self._size == 1:
+        if self._size == 1:
             count = offsets.data[1:] - offsets.data[:-1]
             # Sanity check that our kernel isn't losing values here
             assert (
-                not self._backend.nplike.known_data
-                or count.size is unknown_length
+                count.size is unknown_length
                 or count.size == 0
                 or count.dtype == np.intp
                 or self._backend.nplike.max(count) <= np.iinfo(np.intp).max
@@ -517,9 +489,7 @@ class RegularArray(RegularMeta[Content], Content):
             next_content = self._content._carry(carry, True)
         else:
             this_offsets = self._compact_offsets64(True)
-            if nplike.known_data and not nplike.array_equal(
-                offsets.data, this_offsets.data
-            ):
+            if not nplike.array_equal(offsets.data, this_offsets.data):
                 raise ValueError("cannot broadcast nested list")
 
             next_content = self._content[: offsets[-1]]
@@ -739,7 +709,7 @@ class RegularArray(RegularMeta[Content], Content):
                     "cannot mix jagged slice with NumPy-style advanced indexing",
                 )
 
-            if self._backend.nplike.known_data and head.length != self._size:
+            if head.length != self._size:
                 raise ak._errors.index_error(
                     self,
                     head,
@@ -984,8 +954,7 @@ class RegularArray(RegularMeta[Content], Content):
                     dtype=np.int64,
                 )
                 tocarry.append(ptr)
-                if self._backend.nplike.known_data:
-                    tocarryraw[i] = ptr.ptr
+                tocarryraw[i] = ptr.ptr
 
             toindex = ak.index.Index64.empty(n, nplike, dtype=np.int64)
             fromindex = ak.index.Index64.empty(n, nplike, dtype=np.int64)
@@ -1163,7 +1132,7 @@ class RegularArray(RegularMeta[Content], Content):
             return ak.contents.ListOffsetArray(outoffsets, outcontent, parameters=None)
 
     def _validity_error(self, path):
-        if self._backend.nplike.known_data and self.size < 0:
+        if self.size < 0:
             return f"at {path} ({type(self)!r}): size < 0"
 
         return self._content._validity_error(path + ".content")
@@ -1254,7 +1223,7 @@ class RegularArray(RegularMeta[Content], Content):
             return buffer.view(np.dtype(("U", max_code_points)))
         elif array_param == "bytestring":
             # Ensure that we have at-least length-1 bytestrings
-            if self._size is not unknown_length and self._size == 0:
+            if self._size == 0:
                 # Create new empty-buffer
                 return backend.nplike.zeros(self.length, dtype=np.uint8).view(
                     np.dtype(("S", 1))
@@ -1265,10 +1234,6 @@ class RegularArray(RegularMeta[Content], Content):
             out = self._content._to_backend_array(allow_missing, backend)
             shape = (self.length, self._size, *out.shape[1:])
 
-            # ShapeItem is a defined type, but some nplikes don't map onto the entire space; e.g.
-            # NumPy never has `None` shape items. We require that if a shape-item is used between nplikes
-            # they both be the same "known-shape-ness".
-            assert self._backend.nplike.known_data == backend.nplike.known_data
             return self._backend.nplike.reshape(
                 out[
                     : self._backend.nplike.shape_item_as_index(self.length * self._size)
@@ -1284,7 +1249,6 @@ class RegularArray(RegularMeta[Content], Content):
         length: int,
         options: ToArrowOptions,
     ):
-        assert self._backend.nplike.known_data
 
         if self.parameter("__array__") == "string":
             return self.to_ListOffsetArray64(False)._to_arrow(
@@ -1378,11 +1342,7 @@ class RegularArray(RegularMeta[Content], Content):
                 action, depth, depth_context, lateral_context, options
             )
 
-        if self._backend.nplike.known_data:
-            content = self._content[: self.length * self._size]
-        else:
-            self._touch_data(recursive=False)
-            content = self._content
+        content = self._content[: self.length * self._size]
 
         if options["return_array"]:
 
@@ -1441,8 +1401,6 @@ class RegularArray(RegularMeta[Content], Content):
         )
 
     def _to_list(self, behavior, json_conversions):
-        if not self._backend.nplike.known_data:
-            raise TypeError("cannot convert typetracer arrays to Python lists")
 
         if self.parameter("__array__") == "bytestring":
             convert_bytes = (
@@ -1512,11 +1470,7 @@ class RegularArray(RegularMeta[Content], Content):
     ) -> bool:
         return (
             self._is_equal_to_generic(other, all_parameters)
-            and (
-                self._size is unknown_length
-                or other.size is unknown_length
-                or self._size == other.size
-            )
+            and self._size == other.size
             and self._content._is_equal_to(
                 other._content, index_dtype, numpyarray, all_parameters
             )

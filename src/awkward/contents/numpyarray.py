@@ -9,7 +9,6 @@ import awkward as ak
 from awkward._backends.backend import Backend
 from awkward._backends.dispatch import backend_of_obj
 from awkward._backends.numpy import NumpyBackend
-from awkward._backends.typetracer import TypeTracerBackend
 from awkward._layout import maybe_posaxis
 from awkward._meta.numpymeta import NumpyMeta
 from awkward._nplikes import to_nplike
@@ -18,7 +17,6 @@ from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import IndexType, NumpyMetadata
 from awkward._nplikes.placeholder import PlaceholderArray
 from awkward._nplikes.shape import ShapeItem, unknown_length
-from awkward._nplikes.typetracer import TypeTracerArray
 from awkward._nplikes.virtual import VirtualNDArray
 from awkward._parameters import (
     parameters_intersect,
@@ -224,23 +222,6 @@ class NumpyArray(NumpyMeta, Content):
             self._raw(backend.nplike), byteorder
         )
 
-    def _to_typetracer(self, forget_length: bool) -> Self:
-        backend = TypeTracerBackend.instance()
-        data = self._raw(backend.nplike)
-        return NumpyArray(
-            data.forget_length() if forget_length else data,
-            parameters=self._parameters,
-            backend=backend,
-        )
-
-    def _touch_data(self, recursive: bool):
-        if not self._backend.nplike.known_data:
-            self._data.touch_data()
-
-    def _touch_shape(self, recursive: bool):
-        if not self._backend.nplike.known_data:
-            self._data.touch_shape()
-
     @property
     def length(self) -> ShapeItem:
         return self._data.shape[0]
@@ -322,9 +303,6 @@ class NumpyArray(NumpyMeta, Content):
         return is_virtual
 
     def _getitem_at(self, where: IndexType):
-        if not self._backend.nplike.known_data and len(self._data.shape) == 1:
-            self._touch_data(recursive=False)
-            return TypeTracerArray._new(self._data.dtype, shape=())
 
         try:
             out = self._data[where]
@@ -337,9 +315,9 @@ class NumpyArray(NumpyMeta, Content):
             return out
 
     def _getitem_range(self, start: IndexType, stop: IndexType) -> Content:
-        # in non-typetracer mode (and if all lengths are known) we can check if the slice is a no-op
-        # (i.e. slicing the full array) and shortcut to avoid noticeable python overhead
-        if self._backend.nplike.known_data and (start == 0 and stop == self.length):
+        # if the slice is a no-op (i.e. slicing the full array), shortcut to
+        # avoid noticeable python overhead
+        if start == 0 and stop == self.length:
             return self
 
         try:
@@ -1248,8 +1226,6 @@ class NumpyArray(NumpyMeta, Content):
         return self.to_contiguous().to_RegularArray()
 
     def _to_list(self, behavior, json_conversions):
-        if not self._backend.nplike.known_data:
-            raise TypeError("cannot convert typetracer arrays to Python lists")
 
         if self.parameter("__array__") == "byte":
             convert_bytes = (
@@ -1343,10 +1319,7 @@ class NumpyArray(NumpyMeta, Content):
             or (
                 self.dtype == other.dtype
                 # Contents agree
-                and (
-                    not self._backend.nplike.known_data
-                    or self._backend.nplike.array_equal(self.data, other.data)
-                )
+                and (self._backend.nplike.array_equal(self.data, other.data))
                 # Shapes agree
                 and all(
                     x is unknown_length or y is unknown_length or x == y

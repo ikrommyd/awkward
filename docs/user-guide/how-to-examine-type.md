@@ -40,8 +40,7 @@ array.type.show()
 array.type
 ```
 
-{attr}`ak.Array.type` always returns an {class}`ak.types.ArrayType` object describing the outermost length of the array, which is always known.[^tt] The {class}`ak.types.ArrayType` wraps a {class}`ak.types.Type` object, which represents an array of "something". For example, an array of integers:
-[^tt]: Except for typetracer arrays, which are used in the [dask-awkward](https://github.com/dask-contrib/dask-awkward) integration.
+{attr}`ak.Array.type` always returns an {class}`ak.types.ArrayType` object describing the outermost length of the array, which is always known. The {class}`ak.types.ArrayType` wraps a {class}`ak.types.Type` object, which represents an array of "something". For example, an array of integers:
 
 ```{code-cell} ipython3
 ak.Array([1, 2, 3]).type

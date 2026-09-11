@@ -85,8 +85,6 @@ def to_buffers(
         container = {}
     if backend is None:
         backend = content._backend
-    if not backend.nplike.known_data:
-        raise TypeError("cannot call 'to_buffers' on an array without concrete data")
 
     if isinstance(buffer_key, str):
 
@@ -257,13 +255,10 @@ def reduce(
         else:
             (layout,) = parts
 
-        # Check if we're running with concrete data and if the reducer has a axis=None specialization.
-        # If both are true, we use the specialized reducer. This allows us to use optimized implementations
-        # from e.g. NumPy, but also make use of potentially better algorithms, i.e. Kahan summation for sum.
-        if (
-            layout.backend.nplike.known_data
-            and (specialization := reducer.axis_none_reducer()) is not None
-        ):
+        # If the reducer has an axis=None specialization, we use it. This allows us to use optimized
+        # implementations from e.g. NumPy, but also make use of potentially better algorithms, i.e.
+        # Kahan summation for sum.
+        if (specialization := reducer.axis_none_reducer()) is not None:
             # overwrite reducer if it has an axis=None version
             reducer = specialization
 
@@ -417,11 +412,3 @@ def sort(
     offsets = ak.index.Index64([0, layout.length], nplike=layout.backend.nplike)
 
     return layout._sort_next(negaxis, starts, offsets, 1, ascending, stable)
-
-
-def touch_data(layout: Content, recursive: bool = True):
-    layout._touch_data(recursive)
-
-
-def touch_shape(layout: Content, recursive: bool = True):
-    layout._touch_shape(recursive)

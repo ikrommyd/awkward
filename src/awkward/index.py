@@ -11,9 +11,7 @@ from awkward._nplikes.dispatch import nplike_of_obj
 from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import NumpyLike, NumpyMetadata
 from awkward._nplikes.shape import ShapeItem
-from awkward._nplikes.typetracer import TypeTracer
 from awkward._nplikes.virtual import VirtualNDArray
-from awkward._slicing import normalize_slice
 from awkward._typing import Any, DType, Final, Self, cast
 
 np: Final = NumpyMetadata.instance()
@@ -141,16 +139,6 @@ class Index:
     def length(self) -> ShapeItem:
         return self._data.shape[0]
 
-    def forget_length(self) -> Self:
-        tt = TypeTracer.instance()
-        if isinstance(self._nplike, type(tt)):
-            data = self._data
-        else:
-            data = self.raw(tt)
-
-        assert hasattr(data, "forget_length")
-        return type(self)(data.forget_length(), metadata=self._metadata, nplike=tt)
-
     def raw(self, nplike: NumpyLike) -> ArrayLike:
         return to_nplike(self.data, nplike, from_nplike=self._nplike)
 
@@ -231,13 +219,9 @@ class Index:
 
     def __getitem__(self, where):
         if isinstance(where, slice):
-            where = normalize_slice(where, nplike=self.nplike)
-
-            # in non-typetracer mode (and if all lengths are known) we can check if the slice is a no-op
-            # (i.e. slicing the full array) and shortcut to avoid noticeable python overhead
-            if self._nplike.known_data and (
-                where.step == 1 and where.start == 0 and where.stop == self.length
-            ):
+            # if the slice is a no-op (i.e. slicing the full array), shortcut to
+            # avoid noticeable python overhead
+            if where.step == 1 and where.start == 0 and where.stop == self.length:
                 return self
 
         out = self._data[where]
@@ -275,20 +259,11 @@ class Index:
     ) -> bool:
         if index_dtype:
             return (
-                not self._nplike.known_data
-                or self._nplike.array_equal(self.data, other.data)
+                self._nplike.array_equal(self.data, other.data)
             ) and self._data.dtype == other.data.dtype
 
         else:
             return self._nplike.array_equal(self.data, other.data)
-
-    def _touch_data(self):
-        if hasattr(self._data, "touch_data"):
-            self._data.touch_data()
-
-    def _touch_shape(self):
-        if hasattr(self._data, "touch_shape"):
-            self._data.touch_shape()
 
 
 class Index8(Index):

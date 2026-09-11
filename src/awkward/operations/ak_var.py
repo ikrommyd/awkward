@@ -286,7 +286,7 @@ def _impl(x, weight, ddof, axis, keepdims, mask_identity, highlevel, behavior, a
             # sum the squared deviations. Numerically stable (the one-pass
             # E[x**2]-E[x]**2 form catastrophically cancels) and overflow-safe.
             # Used for weighted, complex, axis=None, a non-innermost axis, and
-            # the typetracer backend.
+            # non-cpu backends.
             # Centring needs `x - xmean` to broadcast, which is undefined when the
             # reduced axis is not the innermost one of a *ragged* array; there the
             # one-pass form is used instead.

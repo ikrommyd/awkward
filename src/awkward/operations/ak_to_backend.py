@@ -23,10 +23,9 @@ def to_backend(array, backend, *, highlevel=True, behavior=None, attrs=None):
 
     Args:
         array: Array-like data (anything #ak.to_layout recognizes).
-        backend (`"cpu"` or `"typetracer"`): If `"cpu"`, the array structure is
-            recursively copied (if need be) to main memory for use with
-            the default Numpy backend; if `"typetracer"`, the array is replaced
-            by a data-less typetracer with the same type.
+        backend (`"cpu"`): If `"cpu"`, the array structure is recursively
+            copied (if need be) to main memory for use with the default NumPy
+            backend.
         highlevel (bool): If True, return an #ak.Array; otherwise, return
             a low-level #ak.contents.Content subclass.
         behavior (None or dict): Custom #ak.behavior for the output array, if

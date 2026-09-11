@@ -2057,14 +2057,6 @@ def test_negative_named_axis_ak_sum():
     assert not _get_named_axis(ak.sum(named_array, axis=None))
 
 
-def test_named_axis_ak_to_backend():
-    array = ak.Array([[1, 2], [3], [], [4, 5, 6]])
-
-    named_array = ak.with_named_axis(array, ("x", "y"))
-
-    assert ak.to_backend(named_array, "typetracer").named_axis == named_array.named_axis
-
-
 def test_named_axis_ak_to_packed():
     array = ak.Array([[1, 2], [3], [], [4, 5, 6]])
 

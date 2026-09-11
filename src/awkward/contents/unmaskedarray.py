@@ -14,7 +14,6 @@ from awkward._nplikes.array_like import ArrayLike
 from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import IndexType, NumpyMetadata
 from awkward._nplikes.shape import ShapeItem, unknown_length
-from awkward._nplikes.typetracer import MaybeNone
 from awkward._parameters import (
     parameters_intersect,
     parameters_union,
@@ -161,20 +160,6 @@ class UnmaskedArray(UnmaskedMeta[Content], Content):
         assert isinstance(form, self.form_cls)
         self._content._to_buffers(form.content, getkey, container, backend, byteorder)
 
-    def _to_typetracer(self, forget_length: bool) -> Self:
-        return UnmaskedArray(
-            self._content._to_typetracer(forget_length),
-            parameters=self._parameters,
-        )
-
-    def _touch_data(self, recursive: bool):
-        if recursive:
-            self._content._touch_data(recursive)
-
-    def _touch_shape(self, recursive: bool):
-        if recursive:
-            self._content._touch_shape(recursive)
-
     @property
     def length(self) -> ShapeItem:
         return self._content.length
@@ -246,20 +231,14 @@ class UnmaskedArray(UnmaskedMeta[Content], Content):
         return self._content._is_getitem_at_virtual()
 
     def _getitem_at(self, where: IndexType):
-        if not self._backend.nplike.known_data:
-            self._touch_data(recursive=False)
-            return MaybeNone(self._content._getitem_at(where))
 
         return self._content._getitem_at(where)
 
     def _getitem_range(self, start: IndexType, stop: IndexType) -> Content:
-        if not self._backend.nplike.known_data:
-            self._touch_shape(recursive=False)
-            return self
 
-        # in non-typetracer mode (and if all lengths are known) we can check if the slice is a no-op
-        # (i.e. slicing the full array) and shortcut to avoid noticeable python overhead
-        if self._backend.nplike.known_data and (start == 0 and stop == self.length):
+        # if the slice is a no-op (i.e. slicing the full array), shortcut to
+        # avoid noticeable python overhead
+        if start == 0 and stop == self.length:
             return self
 
         return UnmaskedArray(
@@ -601,8 +580,6 @@ class UnmaskedArray(UnmaskedMeta[Content], Content):
         )
 
     def _to_list(self, behavior, json_conversions):
-        if not self._backend.nplike.known_data:
-            raise TypeError("cannot convert typetracer arrays to Python lists")
 
         out = self._to_list_custom(behavior, json_conversions)
         if out is not None:

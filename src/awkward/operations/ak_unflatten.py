@@ -11,7 +11,6 @@ from awkward._namedaxis import (
 )
 from awkward._nplikes.numpy_like import NumpyMetadata
 from awkward._nplikes.shape import unknown_length
-from awkward._nplikes.typetracer import is_unknown_scalar
 from awkward._regularize import is_integer_like, regularize_axis
 
 __all__ = ("unflatten",)
@@ -123,10 +122,7 @@ def _impl(array, counts, axis, highlevel, behavior, attrs):
 
     if is_integer_like(maybe_counts_layout):
         # Regularize unknown values to unknown lengths
-        if (
-            is_unknown_scalar(maybe_counts_layout)
-            or maybe_counts_layout is unknown_length
-        ):
+        if maybe_counts_layout is unknown_length:
             counts = unknown_length
         else:
             counts = int(counts)
@@ -189,7 +185,6 @@ def _impl(array, counts, axis, highlevel, behavior, attrs):
             if (
                 current_offsets.size is not unknown_length
                 and layout.length is not unknown_length
-                and not is_unknown_scalar(position)
                 and (
                     position >= current_offsets.size
                     or current_offsets[position] != layout.length
@@ -276,7 +271,7 @@ def _impl(array, counts, axis, highlevel, behavior, attrs):
                     )
                     - 1
                 )
-                if backend.nplike.known_data and not backend.nplike.array_equal(
+                if not backend.nplike.array_equal(
                     inneroffsets.data[positions], outeroffsets
                 ):
                     raise ValueError(

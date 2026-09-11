@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import copy
 import json
-import math
 from collections.abc import Mapping, MutableMapping, Sequence
 
 import awkward as ak
@@ -16,7 +15,6 @@ from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import IndexType, NumpyMetadata
 from awkward._nplikes.placeholder import PlaceholderArray
 from awkward._nplikes.shape import ShapeItem, unknown_length
-from awkward._nplikes.typetracer import MaybeNone, TypeTracer
 from awkward._nplikes.virtual import VirtualNDArray
 from awkward._parameters import (
     parameters_intersect,
@@ -132,8 +130,7 @@ class ByteMaskedArray(ByteMaskedMeta[Content], Content):
                 f"{type(self).__name__} 'valid_when' must be boolean, not {valid_when!r}"
             )
         if (
-            content.backend.nplike.known_data
-            and ak._util.maybe_length_of(mask) is not unknown_length
+            ak._util.maybe_length_of(mask) is not unknown_length
             and ak._util.maybe_length_of(content) is not unknown_length
             and mask.length > content.length
         ):
@@ -243,37 +240,9 @@ class ByteMaskedArray(ByteMaskedMeta[Content], Content):
         )
         self._content._to_buffers(form.content, getkey, container, backend, byteorder)
 
-    def _to_typetracer(self, forget_length: bool) -> Self:
-        tt = TypeTracer.instance()
-        mask = self._mask.to_nplike(tt)
-        return ByteMaskedArray(
-            mask.forget_length() if forget_length else mask,
-            self._content._to_typetracer(forget_length),
-            self._valid_when,
-            parameters=self._parameters,
-        )
-
-    def _touch_data(self, recursive: bool):
-        self._mask._touch_data()
-        if recursive:
-            self._content._touch_data(recursive)
-
-    def _touch_shape(self, recursive: bool):
-        self._mask._touch_shape()
-        if recursive:
-            self._content._touch_shape(recursive)
-
     @property
     def length(self) -> ShapeItem:
         return self._mask.length
-
-    def _forget_length(self):
-        return ByteMaskedArray(
-            self._mask.forget_length(),
-            self._content,
-            self._valid_when,
-            parameters=self._parameters,
-        )
 
     def __repr__(self):
         return self._repr("", "", "")
@@ -333,36 +302,18 @@ class ByteMaskedArray(ByteMaskedMeta[Content], Content):
             )
 
     def to_BitMaskedArray(self, valid_when, lsb_order):
-        if not self._backend.nplike.known_data:
-            self._touch_data(recursive=False)
-            if self.length is not unknown_length:
-                excess_length = math.ceil(self.length / 8.0)
-            else:
-                excess_length = unknown_length
-            return ak.contents.BitMaskedArray(
-                ak.index.IndexU8(
-                    self._backend.nplike.empty(excess_length, dtype=np.uint8)
-                ),
-                self._content,
-                valid_when,
-                self.length,
-                lsb_order,
-                parameters=self._parameters,
-            )
+        bit_order = "little" if lsb_order else "big"
+        bytemask = self.mask_as_bool(valid_when).view(np.uint8)
+        bitmask = self.backend.nplike.packbits(bytemask, bitorder=bit_order)
 
-        else:
-            bit_order = "little" if lsb_order else "big"
-            bytemask = self.mask_as_bool(valid_when).view(np.uint8)
-            bitmask = self.backend.nplike.packbits(bytemask, bitorder=bit_order)
-
-            return ak.contents.BitMaskedArray(
-                ak.index.IndexU8(bitmask),
-                self._content,
-                valid_when,
-                self.length,
-                lsb_order,
-                parameters=self._parameters,
-            )
+        return ak.contents.BitMaskedArray(
+            ak.index.IndexU8(bitmask),
+            self._content,
+            valid_when,
+            self.length,
+            lsb_order,
+            parameters=self._parameters,
+        )
 
     def mask_as_bool(self, valid_when=None):
         if valid_when is None:
@@ -391,13 +342,10 @@ class ByteMaskedArray(ByteMaskedMeta[Content], Content):
         return self._content._is_getitem_at_virtual()
 
     def _getitem_at(self, where: IndexType):
-        if not self._backend.nplike.known_data:
-            self._touch_data(recursive=False)
-            return MaybeNone(self._content._getitem_at(where))
 
         if where < 0:
             where += self.length
-        if self._backend.nplike.known_data and not 0 <= where < self.length:
+        if not 0 <= where < self.length:
             raise ak._errors.index_error(self, where)
         if self._mask[where] == self._valid_when:
             return self._content._getitem_at(where)
@@ -405,13 +353,10 @@ class ByteMaskedArray(ByteMaskedMeta[Content], Content):
             return None
 
     def _getitem_range(self, start: IndexType, stop: IndexType) -> Content:
-        if not self._backend.nplike.known_data:
-            self._touch_shape(recursive=False)
-            return self
 
-        # in non-typetracer mode (and if all lengths are known) we can check if the slice is a no-op
-        # (i.e. slicing the full array) and shortcut to avoid noticeable python overhead
-        if self._backend.nplike.known_data and (start == 0 and stop == self.length):
+        # if the slice is a no-op (i.e. slicing the full array), shortcut to
+        # avoid noticeable python overhead
+        if start == 0 and stop == self.length:
             return self
 
         return ByteMaskedArray(
@@ -503,11 +448,7 @@ class ByteMaskedArray(ByteMaskedMeta[Content], Content):
         return numnull, nextcarry, outindex
 
     def _getitem_next_jagged_generic(self, slicestarts, slicestops, slicecontent, tail):
-        if (
-            slicestarts.nplike.known_data
-            and self._backend.nplike.known_data
-            and slicestarts.length != self.length
-        ):
+        if slicestarts.length != self.length:
             raise ak._errors.index_error(
                 self,
                 ak.contents.ListArray(
@@ -609,7 +550,7 @@ class ByteMaskedArray(ByteMaskedMeta[Content], Content):
         _numnull = ak.index.Index64.zeros(1, nplike=self._backend.nplike)
 
         if mask is not None:
-            if self._backend.nplike.known_data and mask_length != mask.length:
+            if mask_length != mask.length:
                 raise ValueError(
                     f"mask length ({mask.length}) is not equal to {type(self).__name__} length ({mask_length})"
                 )
@@ -1009,7 +950,7 @@ class ByteMaskedArray(ByteMaskedMeta[Content], Content):
             return ak.contents.ListOffsetArray(outoffsets, tmp, parameters=None)
 
     def _validity_error(self, path):
-        if self._backend.nplike.known_data and self._content.length < self.mask.length:
+        if self._content.length < self.mask.length:
             return f"at {path} ({type(self)!r}): len(content) < len(mask)"
         else:
             return self._content._validity_error(path + ".content")
@@ -1092,10 +1033,7 @@ class ByteMaskedArray(ByteMaskedMeta[Content], Content):
         lateral_context: Mapping[str, Any] | None,
         options: ApplyActionOptions,
     ) -> Content | None:
-        if self._backend.nplike.known_data:
-            content = self._content[0 : self._mask.length]
-        else:
-            content = self._content
+        content = self._content[0 : self._mask.length]
 
         if options["return_array"]:
             if options["return_simplified"]:
@@ -1171,8 +1109,6 @@ class ByteMaskedArray(ByteMaskedMeta[Content], Content):
             )
 
     def _to_list(self, behavior, json_conversions):
-        if not self._backend.nplike.known_data:
-            raise TypeError("cannot convert typetracer arrays to Python lists")
 
         out = self._to_list_custom(behavior, json_conversions)
         if out is not None:

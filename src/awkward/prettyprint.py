@@ -147,12 +147,6 @@ def custom_str(current: Any) -> str | None:
 def valuestr_horiz(
     data: Any, limit_cols: int, formatter: Formatter
 ) -> tuple[int, list[str]]:
-    if isinstance(data, (ak.highlevel.Array, ak.highlevel.Record)) and (
-        not data.layout.backend.nplike.known_data
-    ):
-        if isinstance(data, ak.highlevel.Array):
-            return 5, ["[...]"]
-
     original_limit_cols = limit_cols
 
     if isinstance(data, ak.highlevel.Array):
@@ -362,12 +356,6 @@ def valuestr(
 ) -> str:
     if formatter is None:
         formatter = Formatter()
-
-    if isinstance(data, (ak.highlevel.Array, ak.highlevel.Record)) and (
-        not data.layout.backend.nplike.known_data
-    ):
-        if isinstance(data, ak.highlevel.Array):
-            return "[...]"
 
     if limit_rows <= 1:
         _, strs = valuestr_horiz(data, limit_cols, formatter)

@@ -398,7 +398,7 @@ def _type_is_enforceable(
             # Assume here that we have a *subset* of the layout, i.e layout is {A, B, C, D, ...}
             # and type is {A, B, C}. As the layout needs to lose a content, we must hope that the matching
             # permutation (by type) is also one that drops only unused contents from the union,
-            # as layout operation must be typetracer-predictable
+            # as the layout operation must be predictable from the type alone
             elif n_layout_contents > n_type_contents:
                 ix_contents = range(n_layout_contents)
                 for ix_perm_contents in permutations(ix_contents, n_type_contents):
@@ -675,9 +675,7 @@ def _recurse_option_any(
         # Check that we can build the content
         content_enforceable = _type_is_enforceable(layout.content, type_)
 
-        if layout.backend.nplike.known_data and layout.backend.nplike.any(
-            layout.mask_as_bool(False)
-        ):
+        if layout.backend.nplike.any(layout.mask_as_bool(False)):
             raise ValueError(
                 "option types can only be removed if there are no missing values"
             )
@@ -783,7 +781,7 @@ def _recurse_union_union(
     # Assume here that we have a *subset* of the layout, i.e layout is {A, B, C, D, ...}
     # and type is {A, B, C}. As the layout needs to lose a content, we must hope that the matching
     # permutation (by type) is also one that drops only unused contents from the union,
-    # as layout operation must be typetracer-predictable
+    # as the layout operation must be predictable from the type alone
     elif n_layout_contents > n_type_contents:
         ix_contents = range(n_layout_contents)
         for ix_perm_contents in permutations(ix_contents, n_type_contents):
@@ -967,7 +965,7 @@ def _recurse_union_non_union(
 
         # Require that we are the only content
         content_is_tag = layout.tags.data == tag
-        if nplike.known_data and not nplike.all(content_is_tag):
+        if not nplike.all(content_is_tag):
             raise ValueError(
                 f"UnionArray(s) can only be converted to {type_} if they are equivalent to their "
                 f"projections"

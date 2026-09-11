@@ -2,7 +2,6 @@
 
 
 import numpy as np
-import pytest
 
 import awkward as ak
 
@@ -175,12 +174,6 @@ def test_numpy_array():
     right = np.arange(2 * 3 * 4, dtype=np.int64).reshape(2, 3, 4)
     assert not ak.almost_equal(left, right)
     assert ak.almost_equal(left, left)
-
-
-def test_typetracer():
-    array = ak.Array([[[1, 2, 3]], [[5, 4]]], backend="typetracer")
-    with pytest.raises(NotImplementedError):
-        ak.almost_equal(array, 2 * array)
 
 
 def test_indexed():

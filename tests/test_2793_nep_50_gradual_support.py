@@ -18,7 +18,7 @@ NUMPY_2 = packaging.version.parse(np.__version__) >= packaging.version.Version(
 
 
 @pytest.mark.skipif(not NUMPY_HAS_NEP_50, reason="NEP-50 requires NumPy >= 1.24.0")
-@pytest.mark.parametrize("backend", ["cpu", "typetracer"])
+@pytest.mark.parametrize("backend", ["cpu"])
 def test_with_nep_50(backend):
     array = ak.to_backend(np.arange(255, dtype=np.uint8), backend)
     assert array.layout.dtype == np.dtype(np.uint8)
@@ -41,7 +41,7 @@ def test_with_nep_50(backend):
 
 
 @pytest.mark.skipif(NUMPY_HAS_NEP_50, reason="NumPy >= 1.24.0 has NEP-50 support")
-@pytest.mark.parametrize("backend", ["cpu", "typetracer"])
+@pytest.mark.parametrize("backend", ["cpu"])
 def test_without_nep_50(backend):
     array = ak.to_backend(np.arange(255, dtype=np.uint8), backend)
     assert array.layout.dtype == np.dtype(np.uint8)

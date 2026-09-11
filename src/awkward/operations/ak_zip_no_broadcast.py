@@ -172,26 +172,20 @@ def _impl(
                 )
             contents.append(layout.content)
 
-        if backend.name == "typetracer":
-            # just get from the first one
-            # we're in typetracer mode, so we can't check the offsets (see else branch)
-            offsets = layouts[0].offsets
-        else:
-            # this is at 'runtime' with actual data, that means we can check the offsets,
-            # but only those that have actual data, i.e. no PlaceholderArrays
-            # so first, let's filter out any PlaceholderArrays
-            comparable_offsets = filter(
-                lambda o: not isinstance(o, ak._nplikes.placeholder.PlaceholderArray),
-                (layout.offsets for layout in layouts),
-            )
-            # check that offsets are the same
-            first = next(comparable_offsets)
-            if not all(
-                first.nplike.all(offsets.data == first.data)
-                for offsets in comparable_offsets
-            ):
-                raise ValueError("all ListOffsetArrays must have the same offsets")
-            offsets = first
+        # check the offsets, but only those that have actual data, i.e. no
+        # PlaceholderArrays, so first, let's filter out any PlaceholderArrays
+        comparable_offsets = filter(
+            lambda o: not isinstance(o, ak._nplikes.placeholder.PlaceholderArray),
+            (layout.offsets for layout in layouts),
+        )
+        # check that offsets are the same
+        first = next(comparable_offsets)
+        if not all(
+            first.nplike.all(offsets.data == first.data)
+            for offsets in comparable_offsets
+        ):
+            raise ValueError("all ListOffsetArrays must have the same offsets")
+        offsets = first
 
         length = _check_equal_lengths(contents)
         out = ak.contents.ListOffsetArray(

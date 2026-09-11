@@ -7,7 +7,7 @@ import numpy as np
 
 import awkward as ak
 from awkward._nplikes.numpy import Numpy
-from awkward.typetracer import PlaceholderArray
+from awkward._nplikes.placeholder import PlaceholderArray
 
 nplike = Numpy.instance()
 

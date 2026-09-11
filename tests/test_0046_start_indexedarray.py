@@ -79,16 +79,9 @@ def test_carry():
 
     assert to_list(listoffsetarray) == [[2.2, 2.2, 0.0], [], [3.3, 4.4]]
     assert to_list(listoffsetarray[::-1]) == [[3.3, 4.4], [], [2.2, 2.2, 0.0]]
-    assert listoffsetarray.to_typetracer()[::-1].form == listoffsetarray[::-1].form
     assert to_list(listoffsetarray[[2, 0]]) == [[3.3, 4.4], [2.2, 2.2, 0.0]]
-    assert listoffsetarray.to_typetracer()[[2, 0]].form == listoffsetarray[[2, 0]].form
     assert to_list(listoffsetarray[[2, 0], 1]) == [4.4, 2.2]  # invokes carry
-    assert (
-        listoffsetarray.to_typetracer()[[2, 0], 1].form
-        == listoffsetarray[[2, 0], 1].form
-    )
     assert to_list(listoffsetarray[2:, 1]) == [4.4]  # invokes carry
-    assert listoffsetarray.to_typetracer()[2:, 1].form == listoffsetarray[2:, 1].form
 
     index = ak.index.Index64(np.array([2, 2, 0, 3, -1], dtype=np.int64))
     indexedarray = ak.contents.IndexedOptionArray(index, content)
@@ -113,23 +106,11 @@ def test_others():
     assert indexedarray[3, 0] == 0.1
     assert indexedarray[3, 1] == 1.0
     assert to_list(indexedarray[3, ::-1]) == [1.0, 0.1]
-    assert indexedarray.to_typetracer()[3, ::-1].form == indexedarray[3, ::-1].form
     assert to_list(indexedarray[3, [1, 1, 0]]) == [1.0, 1.0, 0.1]
-    assert (
-        indexedarray.to_typetracer()[3, [1, 1, 0]].form
-        == indexedarray[3, [1, 1, 0]].form
-    )
     assert to_list(indexedarray[3:, 0]) == [0.1, 0.3]
-    assert indexedarray.to_typetracer()[3:, 0].form == indexedarray[3:, 0].form
     assert to_list(indexedarray[3:, 1]) == [1.0, 3.0]
-    assert indexedarray.to_typetracer()[3:, 1].form == indexedarray[3:, 1].form
     assert to_list(indexedarray[3:, ::-1]) == [[1.0, 0.1], [3.0, 0.3]]
-    assert indexedarray.to_typetracer()[3:, ::-1].form == indexedarray[3:, ::-1].form
     assert to_list(indexedarray[3:, [1, 1, 0]]) == [[1.0, 1.0, 0.1], [3.0, 3.0, 0.3]]
-    assert (
-        indexedarray.to_typetracer()[3:, [1, 1, 0]].form
-        == indexedarray[3:, [1, 1, 0]].form
-    )
 
 
 def test_missing():
@@ -142,16 +123,9 @@ def test_missing():
     indexedarray = ak.contents.IndexedOptionArray(index, content)
 
     assert to_list(indexedarray[3:, 0]) == [None, 0.3]
-    assert indexedarray.to_typetracer()[3:, 0].form == indexedarray[3:, 0].form
     assert to_list(indexedarray[3:, 1]) == [None, 3.0]
-    assert indexedarray.to_typetracer()[3:, 1].form == indexedarray[3:, 1].form
     assert to_list(indexedarray[3:, ::-1]) == [None, [3.0, 0.3]]
-    assert indexedarray.to_typetracer()[3:, ::-1].form == indexedarray[3:, ::-1].form
     assert to_list(indexedarray[3:, [1, 1, 0]]) == [None, [3.0, 3.0, 0.3]]
-    assert (
-        indexedarray.to_typetracer()[3:, [1, 1, 0]].form
-        == indexedarray[3:, [1, 1, 0]].form
-    )
 
 
 def test_builder():

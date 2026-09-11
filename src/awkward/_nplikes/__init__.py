@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import awkward._nplikes.numpy
-import awkward._nplikes.typetracer
 import awkward._nplikes.virtual
 from awkward._nplikes.dispatch import nplike_of_obj
 from awkward._typing import TYPE_CHECKING
@@ -26,10 +25,9 @@ def to_nplike(
     if from_nplike is nplike:
         return array
 
-    # We can always convert virtual arrays to typetracers
-    # but can only convert virtual arrays to other backends with known data if they are intentionally materialized
+    # We can only convert virtual arrays to other backends if they are intentionally materialized
     if isinstance(array, awkward._nplikes.virtual.VirtualNDArray):
-        if not array.is_materialized and nplike.known_data:
+        if not array.is_materialized:
             raise TypeError(
                 "Cannot convert a `VirtualNDArray` to a different `nplike` when its data is not yet materialized."
                 " Call `ak.materialize(array)` first to load the data before converting."
@@ -37,16 +35,9 @@ def to_nplike(
         else:
             if nplike.supports_virtual_arrays:
                 array = array.materialize()
-            elif not nplike.known_data:
-                pass
             else:
                 raise TypeError(
                     f"The target nplike {type(nplike)} does not support virtual arrays"
                 )
-
-    if nplike.known_data and not from_nplike.known_data:
-        raise TypeError(
-            "Converting from an nplike without known data to an nplike with known data is not supported"
-        )
 
     return nplike.asarray(array)

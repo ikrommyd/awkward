@@ -41,9 +41,3 @@ def test_moment_weighted():
     result = ak.moment(ak.Array(x), 3, weight=ak.Array(w))
     xf, wf = x.astype(np.float64), w.astype(np.float64)
     assert result == pytest.approx(np.sum(wf * xf**3) / np.sum(wf))
-
-
-def test_moment_typetracer_is_float64():
-    base = ak.values_astype(ak.Array([[1, 2, 3], [4, 5]]), np.int32)
-    tt = ak.to_backend(base, "typetracer")
-    assert str(ak.moment(tt, 3, axis=-1).type).endswith("float64")

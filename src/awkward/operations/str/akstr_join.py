@@ -5,15 +5,12 @@ from functools import reduce
 
 import awkward as ak
 from awkward._attrs import attrs_of_obj
-from awkward._backends.typetracer import TypeTracerBackend
 from awkward._behavior import behavior_of_obj
 from awkward._dispatch import high_level_function
 from awkward._layout import HighLevelContext, ensure_same_backend
 from awkward._namedaxis import NAMED_AXIS_KEY, NamedAxesWithDims, _unify_named_axis
 
 __all__ = ("join",)
-
-typetracer = TypeTracerBackend.instance()
 
 
 @high_level_function(module="ak.str")

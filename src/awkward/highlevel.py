@@ -151,9 +151,8 @@ class Array(NDArrayOperatorsMixin, Iterable, Sized):
         with_name (None or str): Gives tuples and records a name that can be
             used to override their behavior (see below).
         check_valid (bool): If True, verify that the #layout is valid.
-        backend (None, `"cpu"`, `"typetracer"`): If `"cpu"`, the Array will be placed
-            in main memory for use with other `"cpu"` Arrays and Records; if
-            `"typetracer"`, the Array will be a data-less typetracer. If None, the
+        backend (None or `"cpu"`): If `"cpu"`, the Array will be placed in main
+            memory for use with other `"cpu"` Arrays and Records. If None, the
             `data` are left untouched.
 
     High-level array that can contain data of any type.
@@ -1358,10 +1357,6 @@ class Array(NDArrayOperatorsMixin, Iterable, Sized):
             pytype = type(self).__name__
 
         typestr = repr(str(self.type))[1:-1]
-        if self._layout.backend.nplike.known_data:
-            valuestr = ""
-        else:
-            valuestr = "-typetracer"
 
         # prepare named_axis str for repr
         axisstr = ""
@@ -1382,7 +1377,7 @@ class Array(NDArrayOperatorsMixin, Iterable, Sized):
                     limit_cols - len(pytype) - len(" type='...'") - 3,
                 ),
             )
-        valuestr = valuestr + " " + prettyprint_valuestr(self, 1, strwidth)
+        valuestr = " " + prettyprint_valuestr(self, 1, strwidth)
 
         length = max(3, limit_cols - len(pytype) - len("type='...'") - len(valuestr))
         if len(typestr) > length:
@@ -1809,9 +1804,8 @@ class Record(NDArrayOperatorsMixin):
         with_name (None or str): Gives the record type a name that can be
             used to override its behavior (see below).
         check_valid (bool): If True, verify that the #layout is valid.
-        backend (None, `"cpu"`, `"typetracer"`): If `"cpu"`, the Array will be placed
-            in main memory for use with other `"cpu"` Arrays and Records; if
-            `"typetracer"`, the Array will be a data-less typetracer. If None, the
+        backend (None or `"cpu"`): If `"cpu"`, the Array will be placed in main
+            memory for use with other `"cpu"` Arrays and Records. If None, the
             `data` are left untouched.
 
     High-level record that can contain fields of any type.
@@ -2320,10 +2314,6 @@ class Record(NDArrayOperatorsMixin):
         pytype = type(self).__name__
 
         typestr = repr(str(self.type))[1:-1]
-        if self._layout.array.backend.nplike.known_data:
-            valuestr = ""
-        else:
-            valuestr = "-typetracer"
 
         # prepare named_axis str for repr
         axisstr = ""
@@ -2344,7 +2334,7 @@ class Record(NDArrayOperatorsMixin):
                     limit_cols - len(pytype) - len(" type='...'") - 3,
                 ),
             )
-        valuestr = valuestr + " " + prettyprint_valuestr(self, 1, strwidth)
+        valuestr = " " + prettyprint_valuestr(self, 1, strwidth)
 
         length = max(3, limit_cols - len(pytype) - len("type='...'") - len(valuestr))
         if len(typestr) > length:

@@ -196,14 +196,3 @@ def test_virtual():
     v2.materialize()
     result2 = nplike.byteswap(v2)
     np.testing.assert_array_equal(np.asarray(result2), expected)
-
-
-def test_typetracer():
-    from awkward._nplikes.typetracer import TypeTracer, TypeTracerArray
-
-    tt = TypeTracer.instance()
-    x = TypeTracerArray._new(np.dtype(np.float64), shape=(7,))
-    result = tt.byteswap(x)
-    assert isinstance(result, TypeTracerArray)
-    assert result.dtype == x.dtype
-    assert result.shape == x.shape

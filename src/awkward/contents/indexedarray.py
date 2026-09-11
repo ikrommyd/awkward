@@ -14,7 +14,6 @@ from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import IndexType, NumpyMetadata
 from awkward._nplikes.placeholder import PlaceholderArray
 from awkward._nplikes.shape import ShapeItem, unknown_length
-from awkward._nplikes.typetracer import TypeTracer
 from awkward._nplikes.virtual import VirtualNDArray
 from awkward._parameters import (
     parameters_intersect,
@@ -239,24 +238,6 @@ class IndexedArray(IndexedMeta[Content], Content):
         )
         self._content._to_buffers(form.content, getkey, container, backend, byteorder)
 
-    def _to_typetracer(self, forget_length: bool) -> Self:
-        index = self._index.to_nplike(TypeTracer.instance())
-        return IndexedArray(
-            index.forget_length() if forget_length else index,
-            self._content._to_typetracer(forget_length),
-            parameters=self._parameters,
-        )
-
-    def _touch_data(self, recursive: bool):
-        self._index._touch_data()
-        if recursive:
-            self._content._touch_data(recursive)
-
-    def _touch_shape(self, recursive: bool):
-        self._index._touch_shape()
-        if recursive:
-            self._content._touch_shape(recursive)
-
     @property
     def length(self) -> ShapeItem:
         return self._index.length
@@ -305,24 +286,18 @@ class IndexedArray(IndexedMeta[Content], Content):
         return self._content._is_getitem_at_virtual()
 
     def _getitem_at(self, where: IndexType):
-        if not self._backend.nplike.known_data:
-            self._touch_data(recursive=False)
-            return self._content._getitem_at(where)
 
         if where < 0:
             where += self.length
-        if self._backend.nplike.known_data and not 0 <= where < self.length:
+        if not 0 <= where < self.length:
             raise ak._errors.index_error(self, where)
         return self._content._getitem_at(self._index[where])
 
     def _getitem_range(self, start: IndexType, stop: IndexType) -> Content:
-        if not self._backend.nplike.known_data:
-            self._touch_shape(recursive=False)
-            return self
 
-        # in non-typetracer mode (and if all lengths are known) we can check if the slice is a no-op
-        # (i.e. slicing the full array) and shortcut to avoid noticeable python overhead
-        if self._backend.nplike.known_data and (start == 0 and stop == self.length):
+        # if the slice is a no-op (i.e. slicing the full array), shortcut to
+        # avoid noticeable python overhead
+        if start == 0 and stop == self.length:
             return self
 
         return IndexedArray(
@@ -358,7 +333,7 @@ class IndexedArray(IndexedMeta[Content], Content):
         return IndexedArray(nextindex, self._content, parameters=self._parameters)
 
     def _getitem_next_jagged_generic(self, slicestarts, slicestops, slicecontent, tail):
-        if self._backend.nplike.known_data and slicestarts.length != self.length:
+        if slicestarts.length != self.length:
             raise ak._errors.index_error(
                 self,
                 ak.contents.ListArray(
@@ -452,7 +427,7 @@ class IndexedArray(IndexedMeta[Content], Content):
 
     def project(self, mask=None):
         if mask is not None:
-            if self._backend.nplike.known_data and self._index.length != mask.length:
+            if self._index.length != mask.length:
                 raise ValueError(
                     f"mask length ({mask.length}) is not equal to {type(self).__name__} length ({self._index.length})"
                 )
@@ -549,11 +524,6 @@ class IndexedArray(IndexedMeta[Content], Content):
                 break
             else:
                 head.append(other)
-
-        if any(x.backend.nplike.known_data for x in head + tail) and not all(
-            x.backend.nplike.known_data for x in head + tail
-        ):
-            raise RuntimeError
 
         return head, tail
 
@@ -728,7 +698,7 @@ class IndexedArray(IndexedMeta[Content], Content):
             return reversed._mergemany(tail[1:])
 
     def _fill_none(self, value: Content) -> Content:
-        if value.backend.nplike.known_data and value.length != 1:
+        if value.length != 1:
             raise ValueError(
                 f"fill_none value length ({value.length}) is not equal to 1"
             )
@@ -941,15 +911,13 @@ class IndexedArray(IndexedMeta[Content], Content):
         lateral_context: Mapping[str, Any] | None,
         options: ApplyActionOptions,
     ) -> Content | None:
-        if self._backend.nplike.known_data and self._index.length != 0:
+        if self._index.length != 0:
             npindex = self._index.data
             indexmin = self._backend.nplike.min(npindex)
             indexmax = self._backend.nplike.max(npindex)
             index = ak.index.Index(npindex - indexmin, nplike=self._backend.nplike)
             content = self._content[indexmin : indexmax + 1]
         else:
-            if not self._backend.nplike.known_data:
-                self._touch_data(recursive=False)
             index, content = self._index, self._content
 
         if options["return_array"]:
@@ -1008,8 +976,6 @@ class IndexedArray(IndexedMeta[Content], Content):
             return projected.to_packed(True) if recursive else projected
 
     def _to_list(self, behavior, json_conversions):
-        if not self._backend.nplike.known_data:
-            raise TypeError("cannot convert typetracer arrays to Python lists")
 
         out = self._to_list_custom(behavior, json_conversions)
         if out is not None:
@@ -1066,7 +1032,7 @@ class IndexedArray(IndexedMeta[Content], Content):
     def _trim(self) -> Self:
         nplike = self._backend.nplike
 
-        if not nplike.known_data or self._index.length == 0:
+        if self._index.length == 0:
             return self
 
         idx_buf = nplike.asarray(self._index.data, copy=True)

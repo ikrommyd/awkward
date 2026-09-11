@@ -49,25 +49,17 @@ def register_backend(primary_nplike_cls: type[NumpyLike]):
 
 
 def common_backend(backends: Collection[Backend]) -> Backend:
-    # Either we have one nplike, or one + typetracer
     if len(backends) == 1:
         return next(iter(backends))
+    elif len(backends) > 1:
+        raise ValueError(
+            "cannot operate on arrays with incompatible backends. Use #ak.to_backend to coerce the arrays "
+            "to the same backend"
+        )
     else:
-        # We allow typetracers to mix with other nplikes, and take precedence
-        for backend in backends:
-            if not backend.nplike.known_data:
-                return backend
-
-        if len(backends) > 1:
-            raise ValueError(
-                "cannot operate on arrays with incompatible backends. Use #ak.to_backend to coerce the arrays "
-                "to the same backend"
-            )
-
-        else:
-            raise ValueError(
-                "no backends were given in order to determine a common backend."
-            )
+        raise ValueError(
+            "no backends were given in order to determine a common backend."
+        )
 
 
 def backend_of_obj(obj, default: D | Sentinel = UNSET) -> Backend | D:
