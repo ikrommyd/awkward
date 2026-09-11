@@ -16,7 +16,6 @@ from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import IndexType, NumpyMetadata
 from awkward._nplikes.placeholder import PlaceholderArray
 from awkward._nplikes.shape import ShapeItem, unknown_length
-from awkward._nplikes.typetracer import OneOf, TypeTracer
 from awkward._nplikes.virtual import VirtualNDArray
 from awkward._parameters import parameters_intersect, parameters_union
 from awkward._regularize import is_integer_like
@@ -173,8 +172,7 @@ class UnionArray(UnionMeta[Content], Content):
                 )
 
         if (
-            backend.nplike.known_data
-            and ak._util.maybe_length_of(tags) is not unknown_length
+            ak._util.maybe_length_of(tags) is not unknown_length
             and ak._util.maybe_length_of(index) is not unknown_length
             and tags.length > index.length
         ):
@@ -255,11 +253,11 @@ class UnionArray(UnionMeta[Content], Content):
                     f"{cls.__name__} 'contents' must use the same array library (backend): {type(backend).__name__} vs {type(content.backend).__name__}"
                 )
 
-        if backend.nplike.known_data and self_index.length < self_tags.length:
+        if self_index.length < self_tags.length:
             raise ValueError("invalid UnionArray: len(index) < len(tags)")
 
         # Drop unused contents
-        if dropunused and backend.nplike.known_data and self_tags.length > 0:
+        if dropunused and self_tags.length > 0:
             unique_tags, _, inverse, _ = backend.nplike.unique_all(self_tags.data)
 
             # Remap self_contents to only include used contents
@@ -522,30 +520,6 @@ class UnionArray(UnionMeta[Content], Content):
         for i, content in enumerate(self._contents):
             content._to_buffers(form.content(i), getkey, container, backend, byteorder)
 
-    def _to_typetracer(self, forget_length: bool) -> Self:
-        tt = TypeTracer.instance()
-        tags = self._tags.to_nplike(tt)
-        return UnionArray(
-            tags.forget_length() if forget_length else tags,
-            self._index.to_nplike(tt),
-            [x._to_typetracer(forget_length) for x in self._contents],
-            parameters=self._parameters,
-        )
-
-    def _touch_data(self, recursive: bool):
-        self._tags._touch_data()
-        self._index._touch_data()
-        if recursive:
-            for x in self._contents:
-                x._touch_data(recursive)
-
-    def _touch_shape(self, recursive: bool):
-        self._tags._touch_shape()
-        self._index._touch_shape()
-        if recursive:
-            for x in self._contents:
-                x._touch_shape(recursive)
-
     @property
     def length(self) -> ShapeItem:
         return self._tags.length
@@ -602,25 +576,19 @@ class UnionArray(UnionMeta[Content], Content):
         return False
 
     def _getitem_at(self, where: IndexType):
-        if not self._backend.nplike.known_data:
-            self._touch_data(recursive=False)
-            return OneOf([x._getitem_at(where) for x in self._contents])
 
         if where < 0:
             where += self.length
-        if self._backend.nplike.known_data and not 0 <= where < self.length:
+        if not 0 <= where < self.length:
             raise ak._errors.index_error(self, where)
         tag, index = self._tags[where], self._index[where]
         return self._contents[tag]._getitem_at(index)
 
     def _getitem_range(self, start: IndexType, stop: IndexType) -> Content:
-        if not self._backend.nplike.known_data:
-            self._touch_shape(recursive=False)
-            return self
 
-        # in non-typetracer mode (and if all lengths are known) we can check if the slice is a no-op
-        # (i.e. slicing the full array) and shortcut to avoid noticeable python overhead
-        if self._backend.nplike.known_data and (start == 0 and stop == self.length):
+        # if the slice is a no-op (i.e. slicing the full array), shortcut to
+        # avoid noticeable python overhead
+        if start == 0 and stop == self.length:
             return self
 
         return UnionArray(
@@ -673,67 +641,48 @@ class UnionArray(UnionMeta[Content], Content):
                 tag_for_missing = i
                 break
 
-        if not self._backend.nplike.known_data:
-            self._touch_data(recursive=False)
-            nexttags = self._tags.data
-            nextindex = self._index.data
-            contents = []
-            for tag, content in enumerate(self._contents):
-                if tag == tag_for_missing:
-                    indexedoption_index = self._backend.nplike.arange(
-                        content.length + 1, dtype=np.int64
-                    )
-                    contents.append(
-                        ak.contents.IndexedOptionArray.simplified(
-                            ak.index.Index64(indexedoption_index), content
-                        )
-                    )
-                else:
-                    contents.append(ak.contents.UnmaskedArray.simplified(content))
+        # like _carry, above
+        carry_data = index.raw(self._backend.nplike).copy()
+        is_missing = carry_data < 0
+
+        if self._tags.length != 0:
+            # but the missing values will temporarily use 0 as a placeholder
+            carry_data[is_missing] = 0
+            try:
+                nexttags = self._tags.data[carry_data]
+                nextindex = self._index.data[: self._tags.length][carry_data]
+            except IndexError as err:
+                raise ak._errors.index_error(self, carry_data, str(err)) from err
+
+            # now actually set the missing values
+            nexttags[is_missing] = tag_for_missing
+            nextindex[is_missing] = self._contents[tag_for_missing].length
 
         else:
-            # like _carry, above
-            carry_data = index.raw(self._backend.nplike).copy()
-            is_missing = carry_data < 0
+            # UnionArray is empty, so
+            nexttags = self._backend.nplike.full(
+                len(carry_data), tag_for_missing, dtype=self._tags.dtype
+            )
+            nextindex = self._backend.nplike.full(
+                len(carry_data),
+                self._contents[tag_for_missing].length,
+                dtype=self._index.dtype,
+            )
 
-            if self._tags.length != 0:
-                # but the missing values will temporarily use 0 as a placeholder
-                carry_data[is_missing] = 0
-                try:
-                    nexttags = self._tags.data[carry_data]
-                    nextindex = self._index.data[: self._tags.length][carry_data]
-                except IndexError as err:
-                    raise ak._errors.index_error(self, carry_data, str(err)) from err
-
-                # now actually set the missing values
-                nexttags[is_missing] = tag_for_missing
-                nextindex[is_missing] = self._contents[tag_for_missing].length
-
+        contents = []
+        for tag, content in enumerate(self._contents):
+            if tag == tag_for_missing:
+                indexedoption_index = self._backend.nplike.arange(
+                    content.length + 1, dtype=np.int64
+                )
+                indexedoption_index[content.length] = -1
+                contents.append(
+                    ak.contents.IndexedOptionArray.simplified(
+                        ak.index.Index64(indexedoption_index), content
+                    )
+                )
             else:
-                # UnionArray is empty, so
-                nexttags = self._backend.nplike.full(
-                    len(carry_data), tag_for_missing, dtype=self._tags.dtype
-                )
-                nextindex = self._backend.nplike.full(
-                    len(carry_data),
-                    self._contents[tag_for_missing].length,
-                    dtype=self._index.dtype,
-                )
-
-            contents = []
-            for tag, content in enumerate(self._contents):
-                if tag == tag_for_missing:
-                    indexedoption_index = self._backend.nplike.arange(
-                        content.length + 1, dtype=np.int64
-                    )
-                    indexedoption_index[content.length] = -1
-                    contents.append(
-                        ak.contents.IndexedOptionArray.simplified(
-                            ak.index.Index64(indexedoption_index), content
-                        )
-                    )
-                else:
-                    contents.append(ak.contents.UnmaskedArray.simplified(content))
+                contents.append(ak.contents.UnmaskedArray.simplified(content))
 
         return UnionArray.simplified(
             ak.index.Index(nexttags),
@@ -1064,11 +1013,6 @@ class UnionArray(UnionMeta[Content], Content):
 
         head = [self, *others]
         tail = []
-
-        if any(x.backend.nplike.known_data for x in head + tail) and not all(
-            x.backend.nplike.known_data for x in head + tail
-        ):
-            raise RuntimeError
 
         return head, tail
 
@@ -1423,13 +1367,12 @@ class UnionArray(UnionMeta[Content], Content):
         raise ValueError(f"cannot call ak.{reducer.name} on an irreducible UnionArray")
 
     def _validity_error(self, path):
-        if self._backend.nplike.known_data and self.index.length < self.tags.length:
+        if self.index.length < self.tags.length:
             return f"at {path} ({type(self)!r}): len(index) < len(tags)"
 
         lencontents = self._backend.nplike.empty(len(self.contents), dtype=np.int64)
-        if self._backend.nplike.known_data:
-            for j, _content_j in enumerate(self._contents):
-                lencontents[j] = _content_j.length
+        for j, _content_j in enumerate(self._contents):
+            lencontents[j] = _content_j.length
 
         error = self._backend[
             "awkward_UnionArray_validity",
@@ -1585,15 +1528,6 @@ class UnionArray(UnionMeta[Content], Content):
     ) -> list[Content]:
         out = []
 
-        # typetracer
-        if not self._backend.nplike.known_data:
-            self._touch_data(recursive=False)
-            # just flatten, ignore order, tags, index
-            for c in self._contents:
-                out.extend(c._remove_structure(backend, options))
-            return out
-
-        # backends with concrete data
         for i in range(self._tags.length):
             content = (
                 self._contents[self._tags[i]]
@@ -1701,8 +1635,6 @@ class UnionArray(UnionMeta[Content], Content):
         )
 
     def _to_list(self, behavior, json_conversions):
-        if not self._backend.nplike.known_data:
-            raise TypeError("cannot convert typetracer arrays to Python lists")
 
         out = self._to_list_custom(behavior, json_conversions)
         if out is not None:

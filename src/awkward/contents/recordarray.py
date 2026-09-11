@@ -9,7 +9,6 @@ from collections.abc import Iterable, Mapping, MutableMapping, Sequence
 import awkward as ak
 from awkward._backends.backend import Backend
 from awkward._backends.numpy import NumpyBackend
-from awkward._backends.typetracer import TypeTracerBackend
 from awkward._behavior import find_record_reducer
 from awkward._layout import maybe_posaxis, wrap_layout
 from awkward._meta.recordmeta import RecordMeta
@@ -73,9 +72,8 @@ def _calculate_recordarray_length(
                 "RecordArray if len(contents) == 0, a 'length' must be specified"
             )
 
-        # Take length as minimum length of contents. This will touch shapes
-        it_contents = iter(contents)
-        for content in it_contents:
+        # Take length as minimum length of contents
+        for content in contents:
             # First time we're setting length, and content.length is not unknown_length
             if length is None:
                 length = content.length
@@ -90,17 +88,12 @@ def _calculate_recordarray_length(
             else:
                 length = min(length, content.length)
 
-        # Touch everything else
-        for content in it_contents:
-            content._touch_shape(False)
-
     # Otherwise
     elif length is not unknown_length:
         # Ensure lengths are not smaller than given length.
         for content in contents:
             if (
-                backend.nplike.known_data
-                and ak._util.maybe_length_of(content) is not unknown_length
+                ak._util.maybe_length_of(content) is not unknown_length
                 and content.length < length
             ):
                 raise ValueError(
@@ -259,8 +252,6 @@ class RecordArray(RecordMeta[Content], Content):
 
         self._contents = contents
         self._fields = fields
-        # TODO: maybe need to store original `length` arg separately to the
-        #       computed version (for typetracer conversions)
         self._length = length
         self._length_generator = length_generator
         self._init(parameters, backend)
@@ -369,30 +360,9 @@ class RecordArray(RecordMeta[Content], Content):
         for i, content in enumerate(self._contents):
             content._to_buffers(form.content(i), getkey, container, backend, byteorder)
 
-    def _to_typetracer(self, forget_length: bool) -> Self:
-        backend = TypeTracerBackend.instance()
-        contents = [x._to_typetracer(forget_length) for x in self._contents]
-        return RecordArray(
-            contents,
-            self._fields,
-            unknown_length if forget_length else self._length,
-            parameters=self._parameters,
-            backend=backend,
-        )
-
-    def _touch_data(self, recursive: bool):
-        if recursive:
-            for x in self._contents:
-                x._touch_data(recursive)
-
-    def _touch_shape(self, recursive: bool):
-        if recursive:
-            for x in self._contents:
-                x._touch_shape(recursive)
-
     @property
     def length(self) -> ShapeItem:
-        if self._backend.nplike.known_data and self._length is unknown_length:
+        if self._length is unknown_length:
             gen_length = unknown_length
             if self._length_generator:
                 gen_length = self._length_generator()
@@ -467,7 +437,7 @@ class RecordArray(RecordMeta[Content], Content):
         return False
 
     def _getitem_at(self, where: IndexType):
-        if self._backend.nplike.known_data and where < 0:
+        if where < 0:
             where += self.length
 
         if not (self.length is unknown_length or (0 <= where < self.length)):
@@ -475,18 +445,14 @@ class RecordArray(RecordMeta[Content], Content):
         return Record(self, where)
 
     def _getitem_range(self, start: IndexType, stop: IndexType) -> Content:
-        if not self._backend.nplike.known_data:
-            self._touch_shape(recursive=False)
 
         start, stop, _, length = self._backend.nplike.derive_slice_for_length(
             slice(start, stop), self.length
         )
 
-        # in non-typetracer mode (and if all lengths are known) we can check if the slice is a no-op
-        # (i.e. slicing the full array) and shortcut to avoid noticeable python overhead
-        if self._backend.nplike.known_data and (
-            start == 0 and stop == length == self.length
-        ):
+        # if the slice is a no-op (i.e. slicing the full array), shortcut to
+        # avoid noticeable python overhead
+        if start == 0 and stop == length == self.length:
             return self
 
         if len(self._contents) == 0:
@@ -559,12 +525,11 @@ class RecordArray(RecordMeta[Content], Content):
                 where = where.copy()
 
             negative = where < 0
-            if self._backend.nplike.known_data:
-                if self._backend.nplike.any(negative):
-                    where[negative] += self.length
+            if self._backend.nplike.any(negative):
+                where[negative] += self.length
 
-                if self._backend.nplike.any(where >= self.length):
-                    raise ak._errors.index_error(self, where)
+            if self._backend.nplike.any(where >= self.length):
+                raise ak._errors.index_error(self, where)
 
             nextindex = ak.index.Index64(where, nplike=self._backend.nplike)
             return ak.contents.IndexedArray(nextindex, self, parameters=None)
@@ -666,7 +631,7 @@ class RecordArray(RecordMeta[Content], Content):
             for content in self._contents:
                 trimmed = content._getitem_range(0, self.length)
                 offsets, flattened = trimmed._offsets_and_flattened(axis, depth)
-                if self._backend.nplike.known_data and offsets.length != 0:
+                if offsets.length != 0:
                     raise AssertionError(
                         "RecordArray content with axis > depth + 1 returned a non-empty offsets from offsets_and_flattened"
                     )
@@ -1009,9 +974,8 @@ class RecordArray(RecordMeta[Content], Content):
             # override cannot know about it.
             if reducer.needs_position and shifts is not None:
                 assert isinstance(out, ak.contents.NumpyArray)
-                # Under typetracer, overrides use `length_zero_if_typetracer`
-                # and return a length-zero NumPy-backed layout; move it back
-                # onto our backend (where the kernels below are no-ops).
+                # An override may return a layout on another backend; move it
+                # back onto our backend.
                 if out.backend is not self._backend:
                     out = out.to_backend(self._backend)
                 assert (
@@ -1087,10 +1051,9 @@ class RecordArray(RecordMeta[Content], Content):
             return out
 
     def _validity_error(self, path):
-        if self._backend.nplike.known_data:
-            for i, cont in enumerate(self.contents):
-                if cont.length < self.length:
-                    return f"at {path} ({type(self)!r}): len(field({i})) < len(recordarray)"
+        for i, cont in enumerate(self.contents):
+            if cont.length < self.length:
+                return f"at {path} ({type(self)!r}): len(field({i})) < len(recordarray)"
         for i, cont in enumerate(self.contents):
             sub = cont._validity_error(f"{path}.field({i})")
             if sub != "":
@@ -1235,11 +1198,7 @@ class RecordArray(RecordMeta[Content], Content):
         lateral_context: Mapping[str, Any] | None,
         options: ApplyActionOptions,
     ) -> Content | None:
-        if self._backend.nplike.known_data:
-            contents = [x[: self.length] for x in self._contents]
-        else:
-            self._touch_data(recursive=False)
-            contents = self._contents
+        contents = [x[: self.length] for x in self._contents]
 
         if options["return_array"]:
 
@@ -1307,8 +1266,6 @@ class RecordArray(RecordMeta[Content], Content):
         )
 
     def _to_list(self, behavior, json_conversions):
-        if not self._backend.nplike.known_data:
-            raise TypeError("cannot convert typetracer arrays to Python lists")
 
         out = self._to_list_custom(behavior, json_conversions)
         if out is not None:

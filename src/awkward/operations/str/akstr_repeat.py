@@ -6,7 +6,6 @@ from functools import reduce
 
 import awkward as ak
 from awkward._attrs import attrs_of_obj
-from awkward._backends.typetracer import TypeTracerBackend
 from awkward._behavior import behavior_of_obj
 from awkward._dispatch import high_level_function
 from awkward._layout import HighLevelContext, ensure_same_backend
@@ -15,7 +14,6 @@ from awkward._nplikes.numpy_like import NumpyMetadata
 
 __all__ = ("repeat",)
 
-typetracer = TypeTracerBackend.instance()
 np = NumpyMetadata.instance()
 
 

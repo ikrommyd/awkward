@@ -325,27 +325,15 @@ BROADCAST_RULE_TO_FACTORY_IMPL = {
 }
 
 
-def broadcast_regular_dim_size(contents: Sequence[ak.contents.Content]) -> ShapeItem:
-    # Find known size out of our contents
-    dim_size: ShapeItem
+def broadcast_regular_dim_size(contents: Sequence[ak.contents.Content]) -> int:
     it_non_string_regular_contents = iter(
         c for c in contents if c.is_regular and not is_string_like(c)
     )
-    for x in it_non_string_regular_contents:
-        if x.size is not unknown_length:
-            dim_size = x.size
-            break
-    else:
-        # We should only be here if we didn't find any regular arrays with known lengths;
-        # there is guaranteed to be at least one non-string list
-        dim_size = unknown_length
-    # Now we know that we have at least one layout with concrete size, let's check the remainder
+    # There is guaranteed to be at least one non-string list
+    dim_size = next(it_non_string_regular_contents).size
     # dim_size=0 should win, though, so we require that dim_size != 0
-    if dim_size is not unknown_length and dim_size > 0:
+    if dim_size > 0:
         for x in it_non_string_regular_contents:
-            # Any unknown lengths can't be compared
-            if x.size is unknown_length:
-                continue
             # Any zero-length column triggers zero broadcasting
             if x.size == 0:
                 return 0
@@ -360,11 +348,7 @@ def broadcast_to_offsets_avoiding_carry(
 ) -> ak.contents.Content:
     nplike = list_content.backend.nplike
 
-    # Without known data, we can't perform these optimisations
-    if not nplike.known_data:
-        return list_content._broadcast_tooffsets64(offsets).content
-
-    elif isinstance(list_content, ListOffsetArray):
+    if isinstance(list_content, ListOffsetArray):
         if nplike.array_equal(offsets.data, list_content.offsets.data):
             next_length = nplike.index_as_shape_item(offsets[-1])
             return list_content.content[:next_length]
@@ -569,8 +553,8 @@ def apply_step(
         if all(x.is_regular or (is_string_like(x) or not x.is_list) for x in contents):
             # Compute the expected dim size
             dim_size = broadcast_regular_dim_size(contents)
-            dimsize_maybe_broadcastable = dim_size is unknown_length or dim_size > 1
-            dimsize_is_zero = dim_size is not unknown_length and dim_size == 0
+            dimsize_maybe_broadcastable = dim_size > 1
+            dimsize_is_zero = dim_size == 0
 
             # Build a broadcast index for size=1 contents, and identify whether we have strings
             inputs_are_strings = []
@@ -584,7 +568,6 @@ def apply_step(
                         not content_is_string
                         # Is this layout known to be size==1?
                         and x.is_regular
-                        and x.size is not unknown_length
                         and x.size == 1
                         # Does the computed dim_size support broadcasting
                         and dimsize_maybe_broadcastable
@@ -617,9 +600,7 @@ def apply_step(
                 zip(named_axes_with_ndims, inputs, inputs_are_strings, strict=True)
             ):
                 if isinstance(x, RegularArray) and not x_is_string:
-                    content_size_maybe_one = (
-                        x.size is not unknown_length and x.size == 1
-                    )
+                    content_size_maybe_one = x.size == 1
                     # If dimsize is known to be exactly zero, all contents are zero length
                     if dimsize_is_zero:
                         nextinputs.append(x.content[:0])
@@ -642,12 +623,7 @@ def apply_step(
                         lateral_context[NAMED_AXIS_KEY][i] = depth_context[
                             NAMED_AXIS_KEY
                         ][i]
-                    # Any unknown values or sizes are assumed to be correct as-is
-                    elif (
-                        dim_size is unknown_length
-                        or x.size is unknown_length
-                        or x.size == dim_size
-                    ):
+                    elif x.size == dim_size:
                         nextinputs.append(x.content[: x.length * x.size])
                         nextparameters.append(x._parameters)
                     else:

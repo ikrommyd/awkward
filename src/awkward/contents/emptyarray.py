@@ -7,7 +7,6 @@ from collections.abc import Mapping, MutableMapping, Sequence
 import awkward as ak
 from awkward._backends.backend import Backend
 from awkward._backends.numpy import NumpyBackend
-from awkward._backends.typetracer import TypeTracerBackend
 from awkward._layout import maybe_posaxis
 from awkward._meta.emptymeta import EmptyMeta
 from awkward._nplikes.array_like import ArrayLike
@@ -132,17 +131,6 @@ class EmptyArray(EmptyMeta, Content):
     ):
         assert isinstance(form, self.form_cls)
 
-    def _to_typetracer(self, forget_length: bool) -> Self:
-        return EmptyArray(
-            backend=TypeTracerBackend.instance(),
-        )
-
-    def _touch_data(self, recursive: bool):
-        pass
-
-    def _touch_shape(self, recursive: bool):
-        pass
-
     @property
     def length(self) -> ShapeItem:
         return 0
@@ -202,7 +190,7 @@ class EmptyArray(EmptyMeta, Content):
     def _carry(self, carry: Index, allow_lazy: bool) -> EmptyArray:
         assert isinstance(carry, ak.index.Index)
 
-        if not carry.nplike.known_data or carry.length == 0:
+        if carry.length == 0:
             return self
         else:
             raise ak._errors.index_error(self, carry.data, "array is empty")
@@ -246,7 +234,7 @@ class EmptyArray(EmptyMeta, Content):
             return self._getitem_next_ellipsis(tail, advanced)
 
         elif isinstance(head, ak.index.Index64):
-            if not head.nplike.known_data or head.length == 0:
+            if head.length == 0:
                 return self
             else:
                 raise ak._errors.index_error(self, head.data, "array is empty")
@@ -454,8 +442,6 @@ class EmptyArray(EmptyMeta, Content):
         return self
 
     def _to_list(self, behavior, json_conversions):
-        if not self._backend.nplike.known_data:
-            raise TypeError("cannot convert typetracer arrays to Python lists")
         return []
 
     def _to_backend(self, backend: Backend) -> Self:

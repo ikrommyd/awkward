@@ -14,10 +14,6 @@ def test_listoffsetarray_localindex():
         [[0.0, 1.1, 2.2], [], [3.3, 4.4], [5.5], [6.6, 7.7, 8.8, 9.9]], highlevel=False
     )
     assert to_list(ak._do.local_index(v2_array, 0)) == [0, 1, 2, 3, 4]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 0).form
-        == ak._do.local_index(v2_array, 0).form
-    )
     assert to_list(ak._do.local_index(v2_array, 1)) == [
         [0, 1, 2],
         [],
@@ -25,10 +21,6 @@ def test_listoffsetarray_localindex():
         [0],
         [0, 1, 2, 3],
     ]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 1).form
-        == ak._do.local_index(v2_array, 1).form
-    )
     assert to_list(ak._do.local_index(v2_array, -1)) == [
         [0, 1, 2],
         [],
@@ -36,15 +28,7 @@ def test_listoffsetarray_localindex():
         [0],
         [0, 1, 2, 3],
     ]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -1).form
-        == ak._do.local_index(v2_array, -1).form
-    )
     assert to_list(ak._do.local_index(v2_array, -2)) == [0, 1, 2, 3, 4]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -2).form
-        == ak._do.local_index(v2_array, -2).form
-    )
 
     with pytest.raises(IndexError):
         ak._do.local_index(v2_array, -3)
@@ -56,45 +40,21 @@ def test_listoffsetarray_localindex():
         highlevel=False,
     )
     assert to_list(ak._do.local_index(v2_array, 0)) == [0, 1, 2, 3]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 0).form
-        == ak._do.local_index(v2_array, 0).form
-    )
     assert to_list(ak._do.local_index(v2_array, 1)) == [[0, 1, 2], [], [0], [0]]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 1).form
-        == ak._do.local_index(v2_array, 1).form
-    )
     assert to_list(ak._do.local_index(v2_array, 2)) == [
         [[0, 1, 2], [], [0, 1]],
         [],
         [[0]],
         [[0, 1, 2, 3]],
     ]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 2).form
-        == ak._do.local_index(v2_array, 2).form
-    )
     assert to_list(ak._do.local_index(v2_array, -1)) == [
         [[0, 1, 2], [], [0, 1]],
         [],
         [[0]],
         [[0, 1, 2, 3]],
     ]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -1).form
-        == ak._do.local_index(v2_array, -1).form
-    )
     assert to_list(ak._do.local_index(v2_array, -2)) == [[0, 1, 2], [], [0], [0]]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -2).form
-        == ak._do.local_index(v2_array, -2).form
-    )
     assert to_list(ak._do.local_index(v2_array, -3)) == [0, 1, 2, 3]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -3).form
-        == ak._do.local_index(v2_array, -3).form
-    )
 
     with pytest.raises(IndexError):
         ak._do.local_index(v2_array, -4)
@@ -107,41 +67,17 @@ def test_regulararray_localindex():
         np.arange(2 * 3 * 5).reshape(2, 3, 5), regulararray=True, highlevel=False
     )
     assert to_list(ak._do.local_index(v2_array, 0)) == [0, 1]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 0).form
-        == ak._do.local_index(v2_array, 0).form
-    )
     assert to_list(ak._do.local_index(v2_array, 1)) == [[0, 1, 2], [0, 1, 2]]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 1).form
-        == ak._do.local_index(v2_array, 1).form
-    )
     assert to_list(ak._do.local_index(v2_array, 2)) == [
         [[0, 1, 2, 3, 4], [0, 1, 2, 3, 4], [0, 1, 2, 3, 4]],
         [[0, 1, 2, 3, 4], [0, 1, 2, 3, 4], [0, 1, 2, 3, 4]],
     ]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 2).form
-        == ak._do.local_index(v2_array, 2).form
-    )
     assert to_list(ak._do.local_index(v2_array, -1)) == [
         [[0, 1, 2, 3, 4], [0, 1, 2, 3, 4], [0, 1, 2, 3, 4]],
         [[0, 1, 2, 3, 4], [0, 1, 2, 3, 4], [0, 1, 2, 3, 4]],
     ]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -1).form
-        == ak._do.local_index(v2_array, -1).form
-    )
     assert to_list(ak._do.local_index(v2_array, -2)) == [[0, 1, 2], [0, 1, 2]]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -2).form
-        == ak._do.local_index(v2_array, -2).form
-    )
     assert to_list(ak._do.local_index(v2_array, -3)) == [0, 1]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -3).form
-        == ak._do.local_index(v2_array, -3).form
-    )
 
     with pytest.raises(IndexError):
         ak._do.local_index(v2_array, -4)
@@ -154,23 +90,11 @@ def test_regulararray_localindex():
         highlevel=False,
     )
     assert to_list(ak._do.local_index(v2_array, 0)) == [0, 1]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 0).form
-        == ak._do.local_index(v2_array, 0).form
-    )
     assert to_list(ak._do.local_index(v2_array, 1)) == [[0, 1, 2], [0, 1, 2]]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 1).form
-        == ak._do.local_index(v2_array, 1).form
-    )
     assert to_list(ak._do.local_index(v2_array, 2)) == [
         [[0, 1, 2, 3, 4], [0, 1, 2, 3, 4], [0, 1, 2, 3, 4]],
         [[0, 1, 2, 3, 4], [0, 1, 2, 3, 4], [0, 1, 2, 3, 4]],
     ]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 2).form
-        == ak._do.local_index(v2_array, 2).form
-    )
     assert to_list(ak._do.local_index(v2_array, 3)) == [
         [
             [
@@ -219,10 +143,6 @@ def test_regulararray_localindex():
             ],
         ],
     ]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 3).form
-        == ak._do.local_index(v2_array, 3).form
-    )
     assert to_list(ak._do.local_index(v2_array, -1)) == [
         [
             [
@@ -271,28 +191,12 @@ def test_regulararray_localindex():
             ],
         ],
     ]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -1).form
-        == ak._do.local_index(v2_array, -1).form
-    )
     assert to_list(ak._do.local_index(v2_array, -2)) == [
         [[0, 1, 2, 3, 4], [0, 1, 2, 3, 4], [0, 1, 2, 3, 4]],
         [[0, 1, 2, 3, 4], [0, 1, 2, 3, 4], [0, 1, 2, 3, 4]],
     ]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -2).form
-        == ak._do.local_index(v2_array, -2).form
-    )
     assert to_list(ak._do.local_index(v2_array, -3)) == [[0, 1, 2], [0, 1, 2]]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -3).form
-        == ak._do.local_index(v2_array, -3).form
-    )
     assert to_list(ak._do.local_index(v2_array, -4)) == [0, 1]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -4).form
-        == ak._do.local_index(v2_array, -4).form
-    )
 
     with pytest.raises(IndexError):
         ak._do.local_index(v2_array, -5)
@@ -306,35 +210,11 @@ def test_regulararray_localindex():
     ).layout
 
     assert to_list(ak._do.local_index(v2_array, 0)) == []
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 0).form
-        == ak._do.local_index(v2_array, 0).form
-    )
     assert to_list(ak._do.local_index(v2_array, 1)) == []
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 1).form
-        == ak._do.local_index(v2_array, 1).form
-    )
     assert to_list(ak._do.local_index(v2_array, 2)) == []
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 2).form
-        == ak._do.local_index(v2_array, 2).form
-    )
     assert to_list(ak._do.local_index(v2_array, -1)) == []
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -1).form
-        == ak._do.local_index(v2_array, -1).form
-    )
     assert to_list(ak._do.local_index(v2_array, -2)) == []
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -2).form
-        == ak._do.local_index(v2_array, -2).form
-    )
     assert to_list(ak._do.local_index(v2_array, -3)) == []
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -3).form
-        == ak._do.local_index(v2_array, -3).form
-    )
 
     with pytest.raises(IndexError):
         ak._do.local_index(v2_array, -4)
@@ -364,15 +244,7 @@ def test_bytemaskedarray_localindex():
         [[], [10.0, 11.1, 12.2]],
     ]
     assert to_list(ak._do.local_index(v2_array, axis=0)) == [0, 1, 2, 3, 4]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), axis=0).form
-        == ak._do.local_index(v2_array, axis=0).form
-    )
     assert to_list(ak._do.local_index(v2_array, axis=-3)) == [0, 1, 2, 3, 4]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), axis=-3).form
-        == ak._do.local_index(v2_array, axis=-3).form
-    )
     assert to_list(ak._do.local_index(v2_array, axis=1)) == [
         [0, 1, 2],
         [],
@@ -380,10 +252,6 @@ def test_bytemaskedarray_localindex():
         None,
         [0, 1],
     ]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), axis=1).form
-        == ak._do.local_index(v2_array, axis=1).form
-    )
     assert to_list(ak._do.local_index(v2_array, axis=-2)) == [
         [0, 1, 2],
         [],
@@ -391,10 +259,6 @@ def test_bytemaskedarray_localindex():
         None,
         [0, 1],
     ]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), axis=-2).form
-        == ak._do.local_index(v2_array, axis=-2).form
-    )
     assert to_list(ak._do.local_index(v2_array, axis=2)) == [
         [[0, 1, 2], [], [0, 1]],
         [],
@@ -402,10 +266,6 @@ def test_bytemaskedarray_localindex():
         None,
         [[], [0, 1, 2]],
     ]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), axis=2).form
-        == ak._do.local_index(v2_array, axis=2).form
-    )
     assert to_list(ak._do.local_index(v2_array, axis=-1)) == [
         [[0, 1, 2], [], [0, 1]],
         [],
@@ -413,10 +273,6 @@ def test_bytemaskedarray_localindex():
         None,
         [[], [0, 1, 2]],
     ]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), axis=-1).form
-        == ak._do.local_index(v2_array, axis=-1).form
-    )
 
     with pytest.raises(IndexError):
         ak._do.local_index(v2_array, axis=4)
@@ -429,15 +285,7 @@ def test_numpyarray_localindex():
         np.array([0.0, 1.1, 2.2, 3.3], dtype=np.float64)
     )
     assert to_list(ak._do.local_index(v2_array, axis=0)) == [0, 1, 2, 3]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), axis=0).form
-        == ak._do.local_index(v2_array, axis=0).form
-    )
     assert to_list(ak._do.local_index(v2_array, axis=-1)) == [0, 1, 2, 3]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), axis=-1).form
-        == ak._do.local_index(v2_array, axis=-1).form
-    )
 
     with pytest.raises(IndexError):
         ak._do.local_index(v2_array, axis=1)
@@ -511,10 +359,6 @@ def test_bitmaskedarray_localindex():
         11,
         12,
     ]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -1).form
-        == ak._do.local_index(v2_array, -1).form
-    )
 
     with pytest.raises(IndexError):
         ak._do.local_index(v2_array, -2)
@@ -569,10 +413,6 @@ def test_bitmaskedarray_localindex():
         11,
         12,
     ]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 0).form
-        == ak._do.local_index(v2_array, 0).form
-    )
     assert to_list(ak._do.local_index(v2_array, -1)) == [
         0,
         1,
@@ -588,10 +428,6 @@ def test_bitmaskedarray_localindex():
         11,
         12,
     ]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -1).form
-        == ak._do.local_index(v2_array, -1).form
-    )
 
     with pytest.raises(IndexError):
         ak._do.local_index(v2_array, -2)
@@ -648,10 +484,6 @@ def test_bitmaskedarray_localindex():
         11,
         12,
     ]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 0).form
-        == ak._do.local_index(v2_array, 0).form
-    )
     assert to_list(ak._do.local_index(v2_array, -1)) == [
         0,
         1,
@@ -667,10 +499,6 @@ def test_bitmaskedarray_localindex():
         11,
         12,
     ]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -1).form
-        == ak._do.local_index(v2_array, -1).form
-    )
 
     with pytest.raises(IndexError):
         ak._do.local_index(v2_array, -2)
@@ -685,15 +513,7 @@ def test_unmaskedarray_localindex():
         )
     )
     assert to_list(ak._do.local_index(v2_array, 0)) == [0, 1, 2, 3]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 0).form
-        == ak._do.local_index(v2_array, 0).form
-    )
     assert to_list(ak._do.local_index(v2_array, -1)) == [0, 1, 2, 3]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -1).form
-        == ak._do.local_index(v2_array, -1).form
-    )
 
     with pytest.raises(IndexError):
         ak._do.local_index(v2_array, -2)
@@ -711,15 +531,7 @@ def test_unionarray_localindex():
         ],
     )
     assert to_list(ak._do.local_index(v2_array, 0)) == [0, 1, 2, 3, 4, 5, 6]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 0).form
-        == ak._do.local_index(v2_array, 0).form
-    )
     assert to_list(ak._do.local_index(v2_array, -1)) == [0, 1, 2, 3, 4, 5, 6]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -1).form
-        == ak._do.local_index(v2_array, -1).form
-    )
 
     with pytest.raises(IndexError):
         ak._do.local_index(v2_array, -2)
@@ -740,25 +552,9 @@ def test_recordarray_localindex():
         3,
     )
     assert to_list(ak._do.local_index(v2_array, 0)) == [0, 1]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 0).form
-        == ak._do.local_index(v2_array, 0).form
-    )
     assert to_list(ak._do.local_index(v2_array, 1)) == [[0, 1, 2], [0, 1, 2]]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 1).form
-        == ak._do.local_index(v2_array, 1).form
-    )
     assert to_list(ak._do.local_index(v2_array, -1)) == [[0, 1, 2], [0, 1, 2]]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -1).form
-        == ak._do.local_index(v2_array, -1).form
-    )
     assert to_list(ak._do.local_index(v2_array, -2)) == [0, 1]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -2).form
-        == ak._do.local_index(v2_array, -2).form
-    )
 
     with pytest.raises(IndexError):
         ak._do.local_index(v2_array, -3)
@@ -785,10 +581,6 @@ def test_recordarray_localindex():
         8,
         9,
     ]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 0).form
-        == ak._do.local_index(v2_array, 0).form
-    )
     assert to_list(ak._do.local_index(v2_array, 1)) == [
         [],
         [],
@@ -801,10 +593,6 @@ def test_recordarray_localindex():
         [],
         [],
     ]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 1).form
-        == ak._do.local_index(v2_array, 1).form
-    )
     assert to_list(ak._do.local_index(v2_array, -1)) == [
         [],
         [],
@@ -817,10 +605,6 @@ def test_recordarray_localindex():
         [],
         [],
     ]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -1).form
-        == ak._do.local_index(v2_array, -1).form
-    )
     assert to_list(ak._do.local_index(v2_array, -2)) == [
         0,
         1,
@@ -833,10 +617,6 @@ def test_recordarray_localindex():
         8,
         9,
     ]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -2).form
-        == ak._do.local_index(v2_array, -2).form
-    )
 
     with pytest.raises(IndexError):
         ak._do.local_index(v2_array, -3)
@@ -855,25 +635,9 @@ def test_recordarray_localindex():
     )
 
     assert to_list(ak._do.local_index(v2_array, 0)) == [0, 1, 2]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 0).form
-        == ak._do.local_index(v2_array, 0).form
-    )
     assert to_list(ak._do.local_index(v2_array, 1)) == [[0, 1, 2], [], [0, 1]]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 1).form
-        == ak._do.local_index(v2_array, 1).form
-    )
     assert to_list(ak._do.local_index(v2_array, -1)) == [[0, 1, 2], [], [0, 1]]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -1).form
-        == ak._do.local_index(v2_array, -1).form
-    )
     assert to_list(ak._do.local_index(v2_array, -2)) == [0, 1, 2]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -2).form
-        == ak._do.local_index(v2_array, -2).form
-    )
 
     with pytest.raises(IndexError):
         ak._do.local_index(v2_array, -3)
@@ -892,25 +656,9 @@ def test_recordarray_localindex():
         ),
     )
     assert to_list(ak._do.local_index(v2_array, 0)) == [0, 1, 2]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 0).form
-        == ak._do.local_index(v2_array, 0).form
-    )
     assert to_list(ak._do.local_index(v2_array, 1)) == [[0, 1, 2], [], [0, 1]]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 1).form
-        == ak._do.local_index(v2_array, 1).form
-    )
     assert to_list(ak._do.local_index(v2_array, -1)) == [[0, 1, 2], [], [0, 1]]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -1).form
-        == ak._do.local_index(v2_array, -1).form
-    )
     assert to_list(ak._do.local_index(v2_array, -2)) == [0, 1, 2]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -2).form
-        == ak._do.local_index(v2_array, -2).form
-    )
 
     with pytest.raises(IndexError):
         ak._do.local_index(v2_array, -3)
@@ -929,15 +677,7 @@ def test_recordarray_localindex():
         ),
     )
     assert to_list(ak._do.local_index(v2_array, 0)) == [0, 1, 2, 3, 4, 5, 6]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 0).form
-        == ak._do.local_index(v2_array, 0).form
-    )
     assert to_list(ak._do.local_index(v2_array, -1)) == [0, 1, 2, 3, 4, 5, 6]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -1).form
-        == ak._do.local_index(v2_array, -1).form
-    )
 
     with pytest.raises(IndexError):
         ak._do.local_index(v2_array, -2)
@@ -956,15 +696,7 @@ def test_recordarray_localindex():
         ),
     )
     assert to_list(ak._do.local_index(v2_array, 0)) == [0, 1, 2, 3, 4, 5, 6]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 0).form
-        == ak._do.local_index(v2_array, 0).form
-    )
     assert to_list(ak._do.local_index(v2_array, -1)) == [0, 1, 2, 3, 4, 5, 6]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -1).form
-        == ak._do.local_index(v2_array, -1).form
-    )
 
     with pytest.raises(IndexError):
         ak._do.local_index(v2_array, -2)
@@ -985,15 +717,7 @@ def test_recordarray_localindex():
     )
 
     assert to_list(ak._do.local_index(v2_array, 0)) == [0, 1, 2, 3, 4]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 0).form
-        == ak._do.local_index(v2_array, 0).form
-    )
     assert to_list(ak._do.local_index(v2_array, -1)) == [0, 1, 2, 3, 4]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -1).form
-        == ak._do.local_index(v2_array, -1).form
-    )
 
     with pytest.raises(IndexError):
         ak._do.local_index(v2_array, -2)
@@ -1014,15 +738,7 @@ def test_recordarray_localindex():
     )
 
     assert to_list(ak._do.local_index(v2_array, 0)) == [0, 1, 2, 3, 4]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 0).form
-        == ak._do.local_index(v2_array, 0).form
-    )
     assert to_list(ak._do.local_index(v2_array, -1)) == [0, 1, 2, 3, 4]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -1).form
-        == ak._do.local_index(v2_array, -1).form
-    )
 
     with pytest.raises(IndexError):
         ak._do.local_index(v2_array, -2)
@@ -1096,10 +812,6 @@ def test_recordarray_localindex():
         11,
         12,
     ]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 0).form
-        == ak._do.local_index(v2_array, 0).form
-    )
     assert to_list(ak._do.local_index(v2_array, -1)) == [
         0,
         1,
@@ -1115,10 +827,6 @@ def test_recordarray_localindex():
         11,
         12,
     ]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -1).form
-        == ak._do.local_index(v2_array, -1).form
-    )
     with pytest.raises(IndexError):
         ak._do.local_index(v2_array, -2)
     with pytest.raises(IndexError):
@@ -1192,10 +900,6 @@ def test_recordarray_localindex():
         11,
         12,
     ]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 0).form
-        == ak._do.local_index(v2_array, 0).form
-    )
     assert to_list(ak._do.local_index(v2_array, -1)) == [
         0,
         1,
@@ -1211,10 +915,6 @@ def test_recordarray_localindex():
         11,
         12,
     ]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -1).form
-        == ak._do.local_index(v2_array, -1).form
-    )
 
     with pytest.raises(IndexError):
         ak._do.local_index(v2_array, -2)
@@ -1292,10 +992,6 @@ def test_recordarray_localindex():
         11,
         12,
     ]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 0).form
-        == ak._do.local_index(v2_array, 0).form
-    )
     assert to_list(ak._do.local_index(v2_array, -1)) == [
         0,
         1,
@@ -1311,10 +1007,6 @@ def test_recordarray_localindex():
         11,
         12,
     ]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -1).form
-        == ak._do.local_index(v2_array, -1).form
-    )
 
     with pytest.raises(IndexError):
         ak._do.local_index(v2_array, -2)
@@ -1392,10 +1084,6 @@ def test_recordarray_localindex():
         11,
         12,
     ]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 0).form
-        == ak._do.local_index(v2_array, 0).form
-    )
     assert to_list(ak._do.local_index(v2_array, -1)) == [
         0,
         1,
@@ -1411,10 +1099,6 @@ def test_recordarray_localindex():
         11,
         12,
     ]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -1).form
-        == ak._do.local_index(v2_array, -1).form
-    )
 
     with pytest.raises(IndexError):
         ak._do.local_index(v2_array, -2)
@@ -1433,15 +1117,7 @@ def test_recordarray_localindex():
     )
 
     assert to_list(ak._do.local_index(v2_array, 0)) == [0, 1, 2, 3]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 0).form
-        == ak._do.local_index(v2_array, 0).form
-    )
     assert to_list(ak._do.local_index(v2_array, -1)) == [0, 1, 2, 3]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -1).form
-        == ak._do.local_index(v2_array, -1).form
-    )
 
     with pytest.raises(IndexError):
         ak._do.local_index(v2_array, -2)
@@ -1467,15 +1143,7 @@ def test_recordarray_localindex():
     )
 
     assert to_list(ak._do.local_index(v2_array, 0)) == [0, 1, 2, 3, 4, 5, 6]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), 0).form
-        == ak._do.local_index(v2_array, 0).form
-    )
     assert to_list(ak._do.local_index(v2_array, -1)) == [0, 1, 2, 3, 4, 5, 6]
-    assert (
-        ak._do.local_index(v2_array.to_typetracer(), -1).form
-        == ak._do.local_index(v2_array, -1).form
-    )
 
     with pytest.raises(IndexError):
         ak._do.local_index(v2_array, -2)

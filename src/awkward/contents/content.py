@@ -41,7 +41,6 @@ from awkward._regularize import (
     is_integer_like,
     is_sized_iterable,
 )
-from awkward._slicing import normalize_slice
 from awkward._typing import (
     TYPE_CHECKING,
     Any,
@@ -250,18 +249,6 @@ class Content(Meta):
     def form_cls(self) -> type[Form]:
         raise NotImplementedError
 
-    def to_typetracer(self, forget_length: bool = False) -> Self:
-        return self._to_typetracer(forget_length)
-
-    def _to_typetracer(self, forget_length: bool) -> Self:
-        raise NotImplementedError
-
-    def _touch_data(self, recursive: bool):
-        raise NotImplementedError
-
-    def _touch_shape(self, recursive: bool):
-        raise NotImplementedError
-
     @property
     def length(self) -> ShapeItem:
         raise NotImplementedError
@@ -312,8 +299,6 @@ class Content(Meta):
         )
 
     def __iter__(self):
-        if not self._backend.nplike.known_data:
-            raise TypeError("cannot iterate on an array without concrete data")
 
         for i in range(len(self)):
             yield self._getitem_at(i)
@@ -422,7 +407,7 @@ class Content(Meta):
         jagged = head.content.to_ListOffsetArray64()
         index = head._index
         content = that._getitem_at(0)
-        if self._backend.nplike.known_data and content.length < index.length:
+        if content.length < index.length:
             raise ak._errors.index_error(
                 self,
                 head,
@@ -483,7 +468,7 @@ class Content(Meta):
             )
 
         if isinstance(head.content, ak.contents.ListOffsetArray):
-            if self._backend.nplike.known_data and self.length != 1:
+            if self.length != 1:
                 raise NotImplementedError("reached a not-well-considered code path")
             return self._getitem_next_missing_jagged(head, tail, advanced, self)
 
@@ -547,7 +532,7 @@ class Content(Meta):
         elif isinstance(where, slice) and where.step is None:
             # Ensure that start, stop are non-negative!
             start, stop, _, _ = self._backend.nplike.derive_slice_for_length(
-                normalize_slice(where, nplike=self._backend.nplike), self.length
+                where, self.length
             )
             return self._getitem_range(start, stop)
 
@@ -567,7 +552,7 @@ class Content(Meta):
             # count number of ellipsis
             # Need to use a little trick here:
             #   where.count(Ellipsis) does not work, because it will do a == comparison against Ellipsis,
-            #   and this will fail in the case of typetracers where == is dispatched to np.equal ufunc.
+            #   and this will fail for array indices, where == is dispatched to np.equal ufunc.
             #   In this dispatch we encounter an assertion that the type of the Ellipsis is not allowed.
             #   ...but luckily we can use the fact that Ellipsis is a singleton and use the 'is' operator
             n_ellipsis = 0
@@ -578,7 +563,7 @@ class Content(Meta):
             if n_ellipsis > 1:
                 raise IndexError("an index can only have a single ellipsis ('...')")
 
-            # Backend may change if index contains typetracers
+            # Backend may change if the index has a different backend
             backend = backend_of(self, *where, coerce_to_common=True)
             this = self.to_backend(backend)
 
@@ -880,10 +865,6 @@ class Content(Meta):
             else:
                 head.append(other)
 
-        assert not any(x.backend.nplike.known_data for x in head + tail) or all(
-            x.backend.nplike.known_data for x in head + tail
-        )
-
         return head, tail
 
     def _local_index(self, axis: int, depth: int):
@@ -961,8 +942,7 @@ class Content(Meta):
                 dtype=np.int64,
             )
             tocarry.append(ptr)
-            if self._backend.nplike.known_data:
-                tocarryraw[i] = ptr.ptr
+            tocarryraw[i] = ptr.ptr
 
         toindex = Index64.empty(n, self._backend.nplike, dtype=np.int64)
         fromindex = Index64.empty(n, self._backend.nplike, dtype=np.int64)
@@ -994,7 +974,7 @@ class Content(Meta):
                 ak.contents.IndexedArray.simplified(ptr, self, parameters=None)
             )
             length = contents[-1].length
-        assert not (length is ak._util.UNSET and self._backend.nplike.known_data)
+        assert length is not ak._util.UNSET
         return ak.contents.RecordArray(
             contents, recordlookup, length, parameters=parameters, backend=self._backend
         )

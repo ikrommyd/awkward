@@ -103,9 +103,7 @@ def _drop_option_preserving_form(layout, ensure_empty_mask: bool = False):
         else:
             nplike = this.backend.nplike
             assert not (
-                ensure_empty_mask
-                and nplike.known_data
-                and nplike.any(this.mask_as_bool(valid_when=False))
+                ensure_empty_mask and nplike.any(this.mask_as_bool(valid_when=False))
             ), "did not expect option type, but arrow returned a non-erasable option"
             # Re-write indexed options as indexed
             if isinstance(this, IndexedOptionArray):
@@ -129,50 +127,26 @@ def _apply_through_arrow(
     ensure_empty_mask=False,
     **kwargs,
 ):
-    from awkward._backends.dispatch import backend_of
     from awkward.contents.content import Content
     from awkward.operations.ak_from_arrow import from_arrow
     from awkward.operations.ak_to_arrow import to_arrow
-    from awkward._backends.typetracer import TypeTracerBackend
 
-    backend = backend_of(*args)
-
-    typetracer = TypeTracerBackend.instance()
-    if backend is typetracer:
-        converted_args = [
-            to_arrow(
-                x.form.length_zero_array(),
-                extensionarray=False,
-                string_to32=string_to32,
-                bytestring_to32=bytestring_to32,
-            )
-            if isinstance(x, Content)
-            else x
-            for x in args
-        ]
-        out = from_arrow(
-            operation(*converted_args, **kwargs),
-            generate_bitmasks=generate_bitmasks,
-            highlevel=False,
-        ).to_typetracer(forget_length=True)
-
-    else:
-        converted_args = [
-            to_arrow(
-                x,
-                extensionarray=False,
-                string_to32=string_to32,
-                bytestring_to32=bytestring_to32,
-            )
-            if isinstance(x, Content)
-            else x
-            for x in args
-        ]
-        out = from_arrow(
-            operation(*converted_args, **kwargs),
-            generate_bitmasks=generate_bitmasks,
-            highlevel=False,
+    converted_args = [
+        to_arrow(
+            x,
+            extensionarray=False,
+            string_to32=string_to32,
+            bytestring_to32=bytestring_to32,
         )
+        if isinstance(x, Content)
+        else x
+        for x in args
+    ]
+    out = from_arrow(
+        operation(*converted_args, **kwargs),
+        generate_bitmasks=generate_bitmasks,
+        highlevel=False,
+    )
 
     if expect_option_type:
         return out

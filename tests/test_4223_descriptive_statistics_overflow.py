@@ -72,13 +72,3 @@ def test_var_int64_no_overflow_issue_3525():
     result = ak.var(ak.Array(data))
     assert result == pytest.approx(np.var(data.astype(np.float64)))
     assert not np.isnan(ak.std(ak.Array(data)))
-
-
-def test_typetracer_promotion():
-    # The promotion must work on typetracer layouts (protects the dask-awkward
-    # path): integer input still yields float64 output types.
-    base = ak.values_astype(ak.Array([[1, 2, 3], [4, 5]]), np.int32)
-    tt = ak.to_backend(base, "typetracer")
-    assert str(ak.var(tt, axis=-1).type) == "2 * float64"
-    assert str(ak.mean(tt, axis=-1).type) == "2 * float64"
-    assert ak.moment(tt, 2, axis=-1).layout.dtype == np.dtype(np.float64)

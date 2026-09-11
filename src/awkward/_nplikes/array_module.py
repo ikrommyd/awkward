@@ -22,7 +22,6 @@ from awkward._typing import (
     TYPE_CHECKING,
     Any,
     DType,
-    Final,
     Literal,
     NominalMeta,
     TypeVar,
@@ -72,7 +71,6 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLikeT], metaclass=NominalMeta):
     If the input is not a virtual array, it's a zero cost operation.
     """
 
-    known_data: Final[bool] = True
     _module: Any
 
     def prepare_ufunc(self, ufunc: UfuncLike) -> UfuncLike:
@@ -436,7 +434,7 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLikeT], metaclass=NominalMeta):
         `_getitem_range` (if step == 1). Normalize lengths to fit length of array,
         and for arrays with unknown lengths, these offsets become none.
         """
-        # We have known_data (therefore known shape), so we can safely convert to int
+        # The slice items are known, so we can safely convert them to int
         slice_as_shape = slice(
             slice_.start
             if slice_.start is None

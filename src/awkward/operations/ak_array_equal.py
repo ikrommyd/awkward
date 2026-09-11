@@ -21,9 +21,6 @@ def array_equal(
 ):
     """Returns True if two arrays have the same shape and elements.
 
-    TypeTracer arrays are not supported, as there is very little information
-    to be compared.
-
     Args:
         a1: Array-like data (anything #ak.to_layout recognizes).
         a2: Array-like data (anything #ak.to_layout recognizes).

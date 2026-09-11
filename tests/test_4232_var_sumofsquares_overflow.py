@@ -117,12 +117,6 @@ def test_nanvar_integer():
     assert ak.nanstd(ak.Array(data)) == pytest.approx(np.std(data.astype(np.float64)))
 
 
-def test_var_typetracer_is_float64():
-    base = ak.values_astype(ak.Array([[1, 2, 3], [4, 5]]), np.int32)
-    tt = ak.to_backend(base, "typetracer")
-    assert str(ak.var(tt, axis=-1).type) == "2 * float64"
-
-
 def test_var_float64_unchanged():
     data = np.array([1.5, 2.5, 3.5], dtype=np.float64)
     assert ak.var(ak.Array(data)) == pytest.approx(np.var(data))

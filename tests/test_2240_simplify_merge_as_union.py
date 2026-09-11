@@ -2,7 +2,6 @@
 
 
 import numpy as np
-import pytest
 
 import awkward as ak
 
@@ -14,8 +13,7 @@ def test_many():
     assert result.tolist() == [{"a": 3}, {"c": 3}, {"d": 3}, {"e": 3}]
 
 
-@pytest.mark.parametrize("forget_length", [False, True])
-def test_validity_error_simple(forget_length):
+def test_validity_error_simple():
     layout = ak.contents.UnionArray(
         ak.index.Index8(np.array([0, 0, 0, 0, 1, 1, 1, 1, 1], dtype=np.int8)),
         ak.index.Index64(np.array([0, 1, 2, 3, 0, 1, 2, 3, 4], dtype=np.int64)),
@@ -23,13 +21,9 @@ def test_validity_error_simple(forget_length):
     )
     assert layout.to_list() == [1, 2, 3, 4, 5, 6, 7, 8, 9]
     assert "content(1) is mergeable with content(0)" in ak.validity_error(layout)
-    assert "content(1) is mergeable with content(0)" in ak.validity_error(
-        layout.to_typetracer(forget_length)
-    )
 
 
-@pytest.mark.parametrize("forget_length", [False, True])
-def test_validity_error_complex(forget_length):
+def test_validity_error_complex():
     layout = ak.contents.UnionArray(
         ak.index.Index8(np.array([0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2], dtype=np.int8)),
         ak.index.Index64(np.array([0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2], dtype=np.int64)),
@@ -41,6 +35,3 @@ def test_validity_error_complex(forget_length):
     )
     assert layout.to_list() == [1, 2, 3, 4, "a", "b", "c", "d", 5, 6, 7]
     assert "content(2) is mergeable with content(0)" in ak.validity_error(layout)
-    assert "content(2) is mergeable with content(0)" in ak.validity_error(
-        layout.to_typetracer(forget_length)
-    )

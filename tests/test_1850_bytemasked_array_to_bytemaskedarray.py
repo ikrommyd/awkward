@@ -23,6 +23,3 @@ def test():
         0,
         1,
     ]
-
-    # Check this works
-    layout.to_typetracer().to_ByteMaskedArray(False)

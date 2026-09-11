@@ -15,7 +15,6 @@ from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import IndexType, NumpyMetadata
 from awkward._nplikes.placeholder import PlaceholderArray
 from awkward._nplikes.shape import ShapeItem, unknown_length
-from awkward._nplikes.typetracer import MaybeNone, TypeTracer
 from awkward._nplikes.virtual import VirtualNDArray
 from awkward._regularize import is_integer, is_integer_like
 from awkward._slicing import NO_HEAD
@@ -173,8 +172,7 @@ class BitMaskedArray(BitMaskedMeta[Content], Content):
                 f"{type(self).__name__} 'lsb_order' must be boolean, not {lsb_order!r}"
             )
         if (
-            content.backend.nplike.known_data
-            and length is not unknown_length
+            length is not unknown_length
             and ak._util.maybe_length_of(mask) is not unknown_length
             and length > mask.length * 8
         ):
@@ -182,8 +180,7 @@ class BitMaskedArray(BitMaskedMeta[Content], Content):
                 f"{type(self).__name__} 'length' ({length}) must be <= len(mask) * 8 ({mask.length * 8})"
             )
         if (
-            content.backend.nplike.known_data
-            and length is not unknown_length
+            length is not unknown_length
             and ak._util.maybe_length_of(content) is not unknown_length
             and length > content.length
         ):
@@ -333,30 +330,9 @@ class BitMaskedArray(BitMaskedMeta[Content], Content):
         )
         self._content._to_buffers(form.content, getkey, container, backend, byteorder)
 
-    def _to_typetracer(self, forget_length: bool) -> Self:
-        tt = TypeTracer.instance()
-        return BitMaskedArray(
-            self._mask.to_nplike(tt),
-            self._content._to_typetracer(forget_length),
-            self._valid_when,
-            unknown_length if forget_length else self._length,
-            self._lsb_order,
-            parameters=self._parameters,
-        )
-
-    def _touch_data(self, recursive: bool):
-        self._mask._touch_data()
-        if recursive:
-            self._content._touch_data(recursive)
-
-    def _touch_shape(self, recursive: bool):
-        self._mask._touch_shape()
-        if recursive:
-            self._content._touch_shape(recursive)
-
     @property
     def length(self) -> ShapeItem:
-        if self._backend.nplike.known_data and self._length is unknown_length:
+        if self._length is unknown_length:
             if self._length_generator:
                 self._length = self._length_generator()
             assert is_integer(self._length), (
@@ -510,13 +486,10 @@ class BitMaskedArray(BitMaskedMeta[Content], Content):
         return self._content._is_getitem_at_virtual()
 
     def _getitem_at(self, where: IndexType):
-        if not self._backend.nplike.known_data:
-            self._touch_data(recursive=False)
-            return MaybeNone(self._content._getitem_at(where))
 
         if where < 0:
             where += self.length
-        if not (0 <= where < self.length) and self._backend.nplike.known_data:
+        if not (0 <= where < self.length):
             raise ak._errors.index_error(self, where)
         if self._lsb_order:
             bit = bool(self._mask[where // 8] & (1 << (where % 8)))
@@ -708,9 +681,9 @@ class BitMaskedArray(BitMaskedMeta[Content], Content):
         )
 
     def _validity_error(self, path):
-        if self._backend.nplike.known_data and self.mask.length * 8 < self.length:
+        if self.mask.length * 8 < self.length:
             return f"at {path} ({type(self)!r}): len(mask) * 8 < length"
-        elif self._backend.nplike.known_data and self._content.length < self.length:
+        elif self._content.length < self.length:
             return f"at {path} ({type(self)!r}): len(content) < length"
         else:
             return self._content._validity_error(path + ".content")
@@ -756,10 +729,7 @@ class BitMaskedArray(BitMaskedMeta[Content], Content):
         lateral_context: Mapping[str, Any] | None,
         options: ApplyActionOptions,
     ) -> Content | None:
-        if self._backend.nplike.known_data:
-            content = self._content[0 : self.length]
-        else:
-            content = self._content
+        content = self._content[0 : self.length]
 
         if options["return_array"]:
             if options["return_simplified"]:
@@ -855,8 +825,6 @@ class BitMaskedArray(BitMaskedMeta[Content], Content):
             )
 
     def _to_list(self, behavior, json_conversions):
-        if not self._backend.nplike.known_data:
-            raise TypeError("cannot convert typetracer arrays to Python lists")
 
         out = self._to_list_custom(behavior, json_conversions)
         if out is not None:

@@ -35,9 +35,6 @@ def almost_equal(
     `atol` are added together to compare against the absolute difference
     between `left` and `right`.
 
-    TypeTracer arrays are not supported, as there is very little information
-    to be compared.
-
     Args:
         left: Array-like data (anything #ak.to_layout recognizes).
         right: Array-like data (anything #ak.to_layout recognizes).
@@ -100,11 +97,6 @@ def _impl(
     if check_named_axis and _get_named_axis(left) and _get_named_axis(right):
         if left.named_axis != right.named_axis:
             return False
-
-    if not backend.nplike.known_data:
-        raise NotImplementedError(
-            "Awkward Arrays with typetracer backends cannot yet be compared with `ak.almost_equal`."
-        )
 
     def is_approx_dtype(left, right) -> bool:
         if not dtype_exact:

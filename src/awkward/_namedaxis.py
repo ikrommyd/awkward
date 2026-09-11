@@ -671,10 +671,6 @@ class NamedAxesWithDims:
         cls, arrays: tp.Sequence, unwrap_kwargs: dict | None = None
     ) -> tuple[dict, dict]:
         from awkward._layout import HighLevelContext
-        from awkward._typetracer import MaybeNone
-
-        # unwrap options
-        arrays = [x.content if isinstance(x, MaybeNone) else x for x in arrays]
 
         _unwrap_kwargs = {"allow_unknown": True}
         if unwrap_kwargs is not None:

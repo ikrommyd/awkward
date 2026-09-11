@@ -52,9 +52,9 @@ There is also a custom flake8 plugin (`dev/flake8_awkward.py`) and `nox -s pylin
 - `highlevel.py` — user-facing `ak.Array`, `ak.Record`, `ak.ArrayBuilder`. These wrap a low-level layout.
 - `operations/ak_*.py` — one file per public `ak.*` function. Each goes through `_dispatch.py` (`@high_level_function`), which enables third-party overload dispatch; the function body is split into a `dispatch` generator yielding array arguments, then the `_impl` function.
 - `contents/` — the layout node types (`NumpyArray`, `ListOffsetArray`, `RecordArray`, `IndexedOptionArray`, `UnionArray`, etc.), forming a tree that represents nested/ragged data columnar-wise. `index.py` holds the integer index buffers. `_do.py` contains cross-cutting operations on layouts.
-- `forms/` — metadata-only mirrors of each content type (the "form" = type + buffer structure without data), used for serialization and typetracer.
+- `forms/` — metadata-only mirrors of each content type (the "form" = type + buffer structure without data), used for serialization.
 - `_meta/` — shared base logic between contents and forms.
-- `_backends/` and `_nplikes/` — abstraction over array libraries: NumPy and **typetracer** (shape-only arrays with possibly-unknown lengths, used by dask-awkward to compute without data). Code in `contents/` must go through the nplike API, not call NumPy directly.
+- `_backends/` and `_nplikes/` — abstraction over array libraries (currently only NumPy), plus virtual (lazily-loaded) and placeholder buffers. Code in `contents/` must go through the nplike API, not call NumPy directly.
 - `_kernels.py` + `awkward_cpp._kernel_signatures` — how layouts invoke compiled kernels via ctypes-style signatures, per backend.
 - `_connect/` — integrations: numba, pyarrow (Arrow/Parquet), numexpr, RDataFrame, cling/cppyy.
 - `behaviors/` — built-in behaviors (e.g. strings as character lists) layered on the `ak.behavior` registry, which maps record names/parameters to Python mixin classes.
@@ -69,7 +69,7 @@ There is also a custom flake8 plugin (`dev/flake8_awkward.py`) and `nox -s pylin
 
 The hand-written C++ implementations live in `awkward-cpp/src/cpu-kernels/` (one file per kernel) and must match the spec; `nox -s diagnostics` checks kernel definitions. Adding/changing a kernel means touching the YAML spec, the C++ implementation, and (sometimes) test data, then rebuilding `awkward-cpp` (which regenerates) or running `nox -s prepare`.
 
-**`kernel-specification.yml` is the single source of truth for all backends** — the canonical signature, semantics, edge-case behavior, and Python reference. The CPU C++ kernels must conform to it: Awkward guarantees cross-backend consistency (NumPy, typetracer, compiled kernels), so any divergence breaks slicing, broadcasting, masking, union, and Dask typetracer guarantees. Do **not** reorder arguments, change pointer/buffer types, alter edge cases, add kernels directly in C++, or bypass the generation pipeline.
+**`kernel-specification.yml` is the single source of truth for all backends** — the canonical signature, semantics, edge-case behavior, and Python reference. The CPU C++ kernels must conform to it: Awkward guarantees consistency between the NumPy-based code paths and the compiled kernels, so any divergence breaks slicing, broadcasting, masking, and union guarantees. Do **not** reorder arguments, change pointer/buffer types, alter edge cases, add kernels directly in C++, or bypass the generation pipeline.
 
 To change a kernel: (1) edit `kernel-specification.yml`; (2) run the generation pipeline (rebuild `awkward-cpp`, or `nox -s prepare -- --signatures --tests`); (3) update the CPU C++ implementation to match the reference; (4) confirm `tests-spec` and `tests-cpu-kernels` pass.
 

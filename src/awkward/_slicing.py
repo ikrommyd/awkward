@@ -9,56 +9,17 @@ from awkward._backends.backend import Backend
 from awkward._nplikes import to_nplike
 from awkward._nplikes.dispatch import nplike_of_obj
 from awkward._nplikes.numpy_like import NumpyMetadata
-from awkward._nplikes.shape import unknown_length
-from awkward._nplikes.typetracer import is_unknown_scalar
 from awkward._regularize import is_array_like, is_integer_like, is_sized_iterable
 from awkward._typing import TYPE_CHECKING, Sequence, TypeAlias, TypeVar
 
 if TYPE_CHECKING:
-    from awkward._nplikes.numpy_like import ArrayLike, NumpyLike
+    from awkward._nplikes.numpy_like import ArrayLike
     from awkward.contents.content import Content
 
 np = NumpyMetadata.instance()
 
 
 SliceItem: TypeAlias = "int | slice | str | None | Ellipsis | ArrayLike | Content"
-
-
-def normalize_slice(slice_: slice, *, nplike: NumpyLike) -> slice:
-    """
-    Args:
-        slice_: slice object
-        nplike: NumpyLike of array
-
-    Return a slice of (start, stop, step) for which the slice items have been
-    normalized into index types.
-
-    Raises a ValueError for a zero step, as NumPy does.
-    """
-
-    start = slice_.start
-    stop = slice_.stop
-    step = slice_.step
-
-    # a zero step would loop forever in the kernels, which advance with `j += step`
-    if step is not None and step is not unknown_length and not is_unknown_scalar(step):
-        try:
-            step_as_index = operator.index(step)
-        except TypeError:
-            pass
-        else:
-            if step_as_index == 0:
-                raise ValueError("slice step cannot be zero")
-
-    if nplike.known_data:
-        return slice_
-    # Unknown lengths mean that the slice index is unknown
-    else:
-        start = nplike.shape_item_as_index(start) if start is unknown_length else start
-        stop = nplike.shape_item_as_index(stop) if stop is unknown_length else stop
-        step = nplike.shape_item_as_index(step) if step is unknown_length else step
-
-        return slice(start, stop, step)
 
 
 T = TypeVar("T")
@@ -217,7 +178,16 @@ def normalise_item(item, backend: Backend) -> SliceItem:
         return normalize_integer_like(item)
 
     elif isinstance(item, slice):
-        return normalize_slice(item, nplike=backend.nplike)
+        # a zero step would loop forever in the kernels, which advance with `j += step`
+        if item.step is not None:
+            try:
+                step_as_index = operator.index(item.step)
+            except TypeError:
+                pass
+            else:
+                if step_as_index == 0:
+                    raise ValueError("slice step cannot be zero")
+        return item
 
     elif isinstance(item, str):
         return item
@@ -493,35 +463,29 @@ def _normalise_item_bool_to_int(item: Content, backend: Backend) -> Content:
         and isinstance(item.content, NumpyArray)
         and np.issubdtype(item.content.dtype, np.bool_)
     ):
-        if item_backend.nplike.known_data:
-            nplike = item_backend.nplike
-            item = item.to_ListOffsetArray64(True)
-            flat_mask = ak._do.flatten(item, axis=1)
-            assert flat_mask.is_numpy
-            mask_data = flat_mask.data
+        nplike = item_backend.nplike
+        item = item.to_ListOffsetArray64(True)
+        flat_mask = ak._do.flatten(item, axis=1)
+        assert flat_mask.is_numpy
+        mask_data = flat_mask.data
 
-            cumsum = nplike.empty(mask_data.shape[0] + 1, dtype=np.int64)
-            cumsum[0] = 0
-            nplike.cumsum(mask_data, maybe_out=cumsum[1:])
+        cumsum = nplike.empty(mask_data.shape[0] + 1, dtype=np.int64)
+        cumsum[0] = 0
+        nplike.cumsum(mask_data, maybe_out=cumsum[1:])
 
-            item_offsets = nplike.asarray(item.offsets.data)
-            nextoffsets_data = cumsum[item_offsets]
-            nextoffsets = ak.index.Index(nextoffsets_data)
+        item_offsets = nplike.asarray(item.offsets.data)
+        nextoffsets_data = cumsum[item_offsets]
+        nextoffsets = ak.index.Index(nextoffsets_data)
 
-            # position of each selected element within its own list: its flat
-            # position minus the start of the list it belongs to
-            (selected,) = nplike.nonzero(mask_data)
-            # `repeat` needs counts it can cast to an index, which is 32-bit on
-            # 32-bit platforms
-            counts = nplike.astype(
-                nextoffsets_data[1:] - nextoffsets_data[:-1], dtype=np.intp, copy=False
-            )
-            nextcontent = selected - nplike.repeat(item_offsets[:-1], counts)
-
-        else:
-            item._touch_data(recursive=False)
-            nextoffsets = item.offsets
-            nextcontent = item_backend.nplike.empty(unknown_length, dtype=np.int64)
+        # position of each selected element within its own list: its flat
+        # position minus the start of the list it belongs to
+        (selected,) = nplike.nonzero(mask_data)
+        # `repeat` needs counts it can cast to an index, which is 32-bit on
+        # 32-bit platforms
+        counts = nplike.astype(
+            nextoffsets_data[1:] - nextoffsets_data[:-1], dtype=np.intp, copy=False
+        )
+        nextcontent = selected - nplike.repeat(item_offsets[:-1], counts)
 
         return ListOffsetArray(
             nextoffsets,
@@ -534,51 +498,44 @@ def _normalise_item_bool_to_int(item: Content, backend: Backend) -> Content:
         and isinstance(item.content.content, NumpyArray)
         and np.issubdtype(item.content.content.dtype, np.bool_)
     ):
-        if item_backend.nplike.known_data:
-            # missing values as any integer other than -1 are extremely rare
-            isnegative = item.content.index.data < 0
-            if item_backend.nplike.any(item.content.index.data < -1):
-                safeindex = item.content.index.data.copy()
-                safeindex[isnegative] = -1
-            else:
-                safeindex = item.content.index.data
-
-            # expanded is a new buffer (can be modified in-place)
-            if item.content.content.data.shape[0] > 0:
-                expanded = item.content.content.data[safeindex]
-            else:
-                expanded = item.content.content.backend.nplike.ones(
-                    safeindex.shape[0], dtype=np.bool_
-                )
-
-            localindex = ak._do.local_index(item, axis=1)
-
-            # nextcontent does not include missing values
-            expanded[isnegative] = False
-            nextcontent = localindex.content.data[expanded]
-
-            # list offsets do include missing values
-            expanded[isnegative] = True
-            cumsum = item_backend.nplike.empty(expanded.shape[0] + 1, dtype=np.int64)
-
-            cumsum[0] = 0
-            item_backend.nplike.cumsum(expanded, maybe_out=cumsum[1:])
-            item_offsets = item_backend.nplike.asarray(item.offsets.data)
-            nextoffsets = ak.index.Index(cumsum[item_offsets])
-
-            # outindex fits into the lists; non-missing are sequential
-            outindex = ak.index.Index64(
-                item_backend.nplike.full(nextoffsets[-1], -1, dtype=np.int64)
-            )
-            outindex[~isnegative[expanded]] = item_backend.nplike.arange(
-                nextcontent.shape[0], dtype=np.int64
-            )
-
+        # missing values as any integer other than -1 are extremely rare
+        isnegative = item.content.index.data < 0
+        if item_backend.nplike.any(item.content.index.data < -1):
+            safeindex = item.content.index.data.copy()
+            safeindex[isnegative] = -1
         else:
-            item._touch_data(recursive=False)
-            nextoffsets = item.offsets
-            outindex = item.content.index
-            nextcontent = item_backend.nplike.empty(unknown_length, dtype=np.int64)
+            safeindex = item.content.index.data
+
+        # expanded is a new buffer (can be modified in-place)
+        if item.content.content.data.shape[0] > 0:
+            expanded = item.content.content.data[safeindex]
+        else:
+            expanded = item.content.content.backend.nplike.ones(
+                safeindex.shape[0], dtype=np.bool_
+            )
+
+        localindex = ak._do.local_index(item, axis=1)
+
+        # nextcontent does not include missing values
+        expanded[isnegative] = False
+        nextcontent = localindex.content.data[expanded]
+
+        # list offsets do include missing values
+        expanded[isnegative] = True
+        cumsum = item_backend.nplike.empty(expanded.shape[0] + 1, dtype=np.int64)
+
+        cumsum[0] = 0
+        item_backend.nplike.cumsum(expanded, maybe_out=cumsum[1:])
+        item_offsets = item_backend.nplike.asarray(item.offsets.data)
+        nextoffsets = ak.index.Index(cumsum[item_offsets])
+
+        # outindex fits into the lists; non-missing are sequential
+        outindex = ak.index.Index64(
+            item_backend.nplike.full(nextoffsets[-1], -1, dtype=np.int64)
+        )
+        outindex[~isnegative[expanded]] = item_backend.nplike.arange(
+            nextcontent.shape[0], dtype=np.int64
+        )
 
         return ListOffsetArray(
             nextoffsets,
@@ -602,44 +559,38 @@ def _normalise_item_bool_to_int(item: Content, backend: Backend) -> Content:
         if isinstance(item.content, NumpyArray) and issubclass(
             item.content.dtype.type, (bool, np.bool_)
         ):
-            if item_backend.nplike.known_data:
-                # missing values as any integer other than -1 are extremely rare
-                isnegative = item.index.data < 0
-                if item_backend.nplike.any(item.index.data < -1):
-                    safeindex = item.index.data.copy()
-                    safeindex[isnegative] = -1
-                else:
-                    safeindex = item.index.data
-
-                # expanded is a new buffer (can be modified in-place)
-                if item.content.data.shape[0] > 0:
-                    expanded = item.content.data[safeindex]
-                else:
-                    expanded = item.content.backend.nplike.ones(
-                        safeindex.shape[0], dtype=np.bool_
-                    )
-
-                # nextcontent does not include missing values
-                expanded[isnegative] = False
-                nextcontent = item_backend.nplike.nonzero(expanded)[0]
-
-                # outindex does include missing values
-                expanded[isnegative] = True
-                lenoutindex = item_backend.nplike.count_nonzero(expanded)
-
-                # non-missing are sequential
-                non_negative = item_backend.nplike.logical_not(isnegative[expanded])
-                outindex = ak.index.Index64(
-                    item_backend.nplike.full(lenoutindex, -1, dtype=np.int64)
-                )
-                outindex[to_nplike(non_negative, item_backend.nplike)] = (
-                    item_backend.nplike.arange(nextcontent.shape[0], dtype=np.int64)
-                )
-
+            # missing values as any integer other than -1 are extremely rare
+            isnegative = item.index.data < 0
+            if item_backend.nplike.any(item.index.data < -1):
+                safeindex = item.index.data.copy()
+                safeindex[isnegative] = -1
             else:
-                item._touch_data(recursive=False)
-                outindex = item.index
-                nextcontent = item_backend.nplike.empty(unknown_length, dtype=np.int64)
+                safeindex = item.index.data
+
+            # expanded is a new buffer (can be modified in-place)
+            if item.content.data.shape[0] > 0:
+                expanded = item.content.data[safeindex]
+            else:
+                expanded = item.content.backend.nplike.ones(
+                    safeindex.shape[0], dtype=np.bool_
+                )
+
+            # nextcontent does not include missing values
+            expanded[isnegative] = False
+            nextcontent = item_backend.nplike.nonzero(expanded)[0]
+
+            # outindex does include missing values
+            expanded[isnegative] = True
+            lenoutindex = item_backend.nplike.count_nonzero(expanded)
+
+            # non-missing are sequential
+            non_negative = item_backend.nplike.logical_not(isnegative[expanded])
+            outindex = ak.index.Index64(
+                item_backend.nplike.full(lenoutindex, -1, dtype=np.int64)
+            )
+            outindex[to_nplike(non_negative, item_backend.nplike)] = (
+                item_backend.nplike.arange(nextcontent.shape[0], dtype=np.int64)
+            )
 
             return IndexedOptionArray(
                 outindex,

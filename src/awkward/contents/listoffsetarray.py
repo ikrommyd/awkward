@@ -14,7 +14,6 @@ from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import IndexType, NumpyMetadata
 from awkward._nplikes.placeholder import PlaceholderArray
 from awkward._nplikes.shape import ShapeItem, unknown_length
-from awkward._nplikes.typetracer import TypeTracer, is_unknown_scalar
 from awkward._nplikes.virtual import VirtualNDArray
 from awkward._parameters import (
     type_parameters_equal,
@@ -135,8 +134,7 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
                 f"{type(self).__name__} 'content' must be a Content subtype, not {content!r}"
             )
         if (
-            content.backend.nplike.known_data
-            and ak._util.maybe_length_of(offsets) is not unknown_length
+            ak._util.maybe_length_of(offsets) is not unknown_length
             and ak._util.maybe_length_of(offsets) == 0
         ):
             raise ValueError(
@@ -227,24 +225,6 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
         )
         self._content._to_buffers(form.content, getkey, container, backend, byteorder)
 
-    def _to_typetracer(self, forget_length: bool) -> Self:
-        offsets = self._offsets.to_nplike(TypeTracer.instance())
-        return ListOffsetArray(
-            offsets.forget_length() if forget_length else offsets,
-            self._content._to_typetracer(forget_length),
-            parameters=self._parameters,
-        )
-
-    def _touch_data(self, recursive: bool):
-        self._offsets._touch_data()
-        if recursive:
-            self._content._touch_data(recursive)
-
-    def _touch_shape(self, recursive: bool):
-        self._offsets._touch_shape()
-        if recursive:
-            self._content._touch_shape(recursive)
-
     @property
     def length(self) -> ShapeItem:
         return self._offsets.length - 1
@@ -265,7 +245,7 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
         return "".join(out)
 
     def to_ListOffsetArray64(self, start_at_zero: bool = False) -> ListOffsetArray:
-        known_starts_at_zero = self._backend.nplike.known_data and self._offsets[0] == 0
+        known_starts_at_zero = self._offsets[0] == 0
         if start_at_zero and not known_starts_at_zero:
             offsets = Index64(
                 self._offsets.data - self._offsets[0],
@@ -327,27 +307,20 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
 
     def _getitem_at(self, where: IndexType):
         # Wrap `where` by length
-        if not is_unknown_scalar(where) and where < 0:
+        if where < 0:
             length_index = self._backend.nplike.shape_item_as_index(self.length)
             where += length_index
         # Validate `where`
-        if not (
-            is_unknown_scalar(where)
-            or self.length is unknown_length
-            or (0 <= where < self.length)
-        ):
+        if not (self.length is unknown_length or (0 <= where < self.length)):
             raise ak._errors.index_error(self, where)
         start, stop = self._offsets[where], self._offsets[where + 1]
         return self._content._getitem_range(start, stop)
 
     def _getitem_range(self, start: IndexType, stop: IndexType) -> Content:
-        if not self._backend.nplike.known_data:
-            self._touch_shape(recursive=False)
-            return self
 
-        # in non-typetracer mode (and if all lengths are known) we can check if the slice is a no-op
-        # (i.e. slicing the full array) and shortcut to avoid noticeable python overhead
-        if self._backend.nplike.known_data and (start == 0 and stop == self.length):
+        # if the slice is a no-op (i.e. slicing the full array), shortcut to
+        # avoid noticeable python overhead
+        if start == 0 and stop == self.length:
             return self
 
         offsets = self._offsets[start : stop + 1]
@@ -390,9 +363,7 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
         )
 
     def _compact_offsets64(self, start_at_zero: bool) -> Index64:
-        if not start_at_zero or (
-            self._backend.nplike.known_data and self._offsets[0] == 0
-        ):
+        if not start_at_zero or (self._offsets[0] == 0):
             return self._offsets
         else:
             return Index64(
@@ -401,8 +372,6 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
             )
 
     def _broadcast_tooffsets64(self, offsets: Index) -> ListOffsetArray:
-        self._touch_data(recursive=False)
-        offsets._touch_data()
 
         nplike = self._backend.nplike
         assert offsets.nplike is nplike
@@ -410,7 +379,7 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
             raise AssertionError(
                 "broadcast_tooffsets64 can only be used with non-empty offsets"
             )
-        elif nplike.known_data and offsets[0] != 0:
+        elif offsets[0] != 0:
             raise AssertionError(
                 f"broadcast_tooffsets64 can only be used with offsets that start at 0, not {offsets[0]}"
             )
@@ -426,15 +395,13 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
         # Check whether we need to slice the content, shift our offsets
         this_start = self._offsets[0]
         this_zero_offsets = self._offsets.data
-        if nplike.known_data and this_start == 0:
+        if this_start == 0:
             next_content = self._content
         else:
             this_zero_offsets = this_zero_offsets - this_start
             next_content = self._content[this_start:]
 
-        if nplike.known_data and not nplike.array_equal(
-            this_zero_offsets, offsets.data
-        ):
+        if not nplike.array_equal(this_zero_offsets, offsets.data):
             raise ValueError("cannot broadcast nested list")
 
         return ListOffsetArray(
@@ -667,13 +634,9 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
             return self._local_index_axis0()
         elif posaxis is not None and posaxis + 1 == depth + 1:
             offsets = self._compact_offsets64(True)
-            if self._backend.nplike.known_data:
-                innerlength = nplike.index_as_shape_item(
-                    offsets[nplike.shape_item_as_index(offsets.length) - 1]
-                )
-            else:
-                self._touch_data(recursive=False)
-                innerlength = unknown_length
+            innerlength = nplike.index_as_shape_item(
+                offsets[nplike.shape_item_as_index(offsets.length) - 1]
+            )
             localindex = Index64.empty(innerlength, nplike)
             assert localindex.nplike is nplike and offsets.nplike is nplike
             self._backend.maybe_kernel_error(
@@ -763,12 +726,11 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
             ):
                 raise AxisError("array with strings can only be sorted with axis=-1")
 
-            if self._backend.nplike.known_data and offsets.nplike.known_data:
-                # In the offsets representation, "parents.length" is the *value*
-                # offsets[outlength] (the total number of rows covered by the
-                # bins), which must equal self._offsets.length - 1 (one entry
-                # per row of *this* layout).
-                assert self._offsets.length - 1 == offsets[-1]
+            # In the offsets representation, "parents.length" is the *value*
+            # offsets[outlength] (the total number of rows covered by the
+            # bins), which must equal self._offsets.length - 1 (one entry
+            # per row of *this* layout).
+            assert self._offsets.length - 1 == offsets[-1]
 
             (
                 _distincts,
@@ -813,7 +775,7 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
         else:
             # Local reduction: nextoffsets is just self._offsets, normalized to start at 0.
             nplike = self._backend.nplike
-            if nplike.known_data and self._offsets[0] == 0:
+            if self._offsets[0] == 0:
                 nextoffsets = self._offsets
             else:
                 nextoffsets = Index64(
@@ -996,7 +958,7 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
             )
         else:
             # Local reduction: nextoffsets = self._offsets normalized to start at 0.
-            if nplike.known_data and self._offsets[0] == 0:
+            if self._offsets[0] == 0:
                 nextoffsets = self._offsets
             else:
                 nextoffsets = Index64(
@@ -1126,7 +1088,7 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
                 parameters=self._parameters,
             )
         else:
-            if nplike.known_data and self._offsets[0] == 0:
+            if self._offsets[0] == 0:
                 nextoffsets = self._offsets
             else:
                 nextoffsets = Index64(
@@ -1206,8 +1168,7 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
                     dtype=np.int64,
                 )
                 tocarry.append(ptr)
-                if self._backend.nplike.known_data:
-                    tocarryraw[i] = ptr.ptr
+                tocarryraw[i] = ptr.ptr
 
             toindex = Index64.empty(n, nplike, dtype=np.int64)
             fromindex = Index64.empty(n, nplike, dtype=np.int64)
@@ -1273,9 +1234,7 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
     ):
         nplike = self._backend.nplike
 
-        if self._offsets.dtype != np.dtype(np.int64) or (
-            self._offsets.nplike.known_data and self._offsets[0] != 0
-        ):
+        if self._offsets.dtype != np.dtype(np.int64) or (self._offsets[0] != 0):
             next = self.to_ListOffsetArray64(True)
             return next._reduce_next(
                 reducer,
@@ -1393,7 +1352,7 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
         else:
             # Local reduction: nextoffsets is self._offsets normalized to start at 0,
             # so the per-bin parents kernel disappears entirely.
-            if nplike.known_data and self._offsets[0] == 0:
+            if self._offsets[0] == 0:
                 nextoffsets = self._offsets
             else:
                 nextoffsets = Index64(
@@ -1506,10 +1465,7 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
         maxnextparents = nplike.index_as_shape_item(_maxnextparents[0])
 
         # Trim nextoffsets to its actual size (maxnextparents + 2 entries).
-        # In typetracer mode maxnextparents is unknown_length, in which case
-        # the slice itself is an unknown-length Index.
-        if maxnextparents is not unknown_length:
-            nextoffsets = nextoffsets[: maxnextparents + 2]
+        nextoffsets = nextoffsets[: maxnextparents + 2]
 
         # In the offsets representation, nextstarts is just nextoffsets[:-1]
         # (no parents->nextstarts derivation needed).
@@ -1525,7 +1481,7 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
         )
 
     def _validity_error(self, path):
-        if self._backend.nplike.known_data and self.offsets.length < 1:
+        if self.offsets.length < 1:
             return f"at {path} ({type(self)!r}): len(offsets) < 1"
         assert (
             self.starts.nplike is self._backend.nplike
@@ -1928,15 +1884,11 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
         lateral_context: Mapping[str, Any] | None,
         options: ApplyActionOptions,
     ) -> Content | None:
-        if self._backend.nplike.known_data:
-            offsetsmin = self._offsets[0]
-            offsets = ak.index.Index(
-                self._offsets.data - offsetsmin, nplike=self._backend.nplike
-            )
-            content = self._content[offsetsmin : self._offsets[-1]]
-        else:
-            self._touch_data(recursive=False)
-            offsets, content = self._offsets, self._content
+        offsetsmin = self._offsets[0]
+        offsets = ak.index.Index(
+            self._offsets.data - offsetsmin, nplike=self._backend.nplike
+        )
+        content = self._content[offsetsmin : self._offsets[-1]]
 
         if options["return_array"]:
 
@@ -1991,8 +1943,6 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
         )
 
     def _to_list(self, behavior, json_conversions):
-        if not self._backend.nplike.known_data:
-            raise TypeError("cannot convert typetracer arrays to Python lists")
 
         starts, stops = self.starts, self.stops
         (starts_data,) = maybe_materialize(starts.raw(numpy))

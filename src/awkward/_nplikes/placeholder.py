@@ -99,7 +99,7 @@ class PlaceholderArray(MaterializableArray):
         return f"PlaceholderArray({dtype}{shape})"
 
     def __getitem__(self, index):
-        # Typetracers permit slices that don't touch data or shapes
+        # Placeholders permit slices that don't touch data or shapes
         if isinstance(index, slice):
             length = self._shape[0]
 

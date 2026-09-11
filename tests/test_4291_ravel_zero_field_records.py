@@ -58,11 +58,3 @@ def test_flatten_axis_none_drops_option_above_zero_field_record():
     result = ak.flatten(ak.Array([{}, None]), axis=None)
     assert result.to_list() == []
     assert str(result.type) == "0 * unknown"
-
-
-@pytest.mark.parametrize("operation", OPERATIONS)
-def test_typetracer_backend_is_preserved(operation):
-    array = ak.Array(ak.Array([{}, {}]).layout.to_typetracer(forget_length=False))
-    result = operation(array)
-    assert result.layout.backend.name == "typetracer"
-    assert str(result.type) == "0 * unknown"

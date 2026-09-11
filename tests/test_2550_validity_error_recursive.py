@@ -2,13 +2,11 @@
 
 
 import numpy as np
-import pytest
 
 import awkward as ak
 
 
-@pytest.mark.parametrize("forget_length", [False, True])
-def test(forget_length):
+def test():
     content = ak.contents.ListOffsetArray(
         ak.index.Index64([0, 2, 4, 4]),
         ak.contents.IndexedArray(
@@ -19,9 +17,5 @@ def test(forget_length):
     )
     assert (
         ak.validity_error(content)
-        == 'at highlevel.content ("<class \'awkward.contents.indexedarray.IndexedArray\'>"): __array__ = "categorical" requires contents to be unique'
-    )
-    assert (
-        ak.validity_error(content.to_typetracer(forget_length))
         == 'at highlevel.content ("<class \'awkward.contents.indexedarray.IndexedArray\'>"): __array__ = "categorical" requires contents to be unique'
     )

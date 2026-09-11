@@ -14,12 +14,8 @@ def backend(*arrays):
     This name may be
 
     * `"cpu"` for arrays backed by NumPy;
-    * `"typetracer"` for arrays without any data;
-    * None if the objects are not Awkward, NumPy, or typetracer
-      arrays (e.g. Python numbers, booleans, strings).
-
-    If there are multiple, compatible backends (e.g. NumPy & typetracer)
-    amongst the given arrays, the coercible backend is returned.
+    * None if the objects are not Awkward or NumPy arrays (e.g. Python
+      numbers, booleans, strings).
 
     See #ak.to_backend.
 

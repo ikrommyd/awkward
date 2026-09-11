@@ -12,13 +12,12 @@ import awkward as ak
 #   * ak.covar / ak.corr the same fallback, plus the named-axis strip that keeps
 #     the two-pass path from being rejected by the named-axis compatibility check;
 #   * the SumOfSquares / SumOfPowers reducer dtype guards;
-#   * the float64-accumulator bool-sum cast and its defensive branch;
-#   * the typetracer sum honouring an explicit dtype.
+#   * the float64-accumulator bool-sum cast and its defensive branch.
 #
 # The unweighted numeric reductions here go through the awkward-cpp kernels added
 # by this PR (float64-accumulator sum, sum-of-squares/powers); those cases need a
-# freshly built awkward-cpp. The complex, weighted, error-path, named-axis and
-# typetracer cases run without them.
+# freshly built awkward-cpp. The complex, weighted, error-path and named-axis
+# cases run without them.
 
 
 # --- helpers ---------------------------------------------------------------
@@ -388,16 +387,3 @@ def test_mean_timedelta_axis_none_keeps_timedelta():
     out = ak.mean(arr, axis=None)
     assert isinstance(out, np.timedelta64)
     assert out == np.timedelta64(3, "s")
-
-
-# --- typetracer honours an explicit dtype -----------------------------------
-
-
-def test_typetracer_sum_explicit_dtype():
-    # ak.var on a typetracer routes through the float64-accumulator sum, whose
-    # explicit dtype must be honoured by the typetracer nplike (not re-derived
-    # from the integer input dtype).
-    base = ak.values_astype(ak.Array([[1, 2, 3], [4, 5]]), np.int32)
-    tt = ak.to_backend(base, "typetracer")
-    assert str(ak.var(tt, axis=-1).type) == "2 * float64"
-    assert str(ak.mean(tt, axis=-1).type) == "2 * float64"

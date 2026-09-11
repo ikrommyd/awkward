@@ -62,30 +62,17 @@ def test_getitem():
     a = ak.operations.from_iter([[], [[], []], [[], [], []]], highlevel=False)
 
     assert to_list(a[2]) == [[], [], []]
-    assert a.to_typetracer()[2].form == a[2].form
 
     assert to_list(a[2, 1]) == []
-    assert a.to_typetracer()[2, 1].form == a[2, 1].form
     with pytest.raises(IndexError):
         a[2, 1, 0]
     assert to_list(a[2, 1][()]) == []
-    assert a.to_typetracer()[2, 1][()].form == a[2, 1][()].form
     with pytest.raises(IndexError):
         a[2, 1][0]
     assert to_list(a[2, 1][100:200]) == []
-    assert a.to_typetracer()[2, 1][100:200].form == a[2, 1][100:200].form
     assert to_list(a[2, 1, 100:200]) == []
-    assert a.to_typetracer()[2, 1, 100:200].form == a[2, 1, 100:200].form
     assert to_list(a[2, 1][np.array([], dtype=np.int64)]) == []
-    assert (
-        a.to_typetracer()[2, 1][np.array([], dtype=np.int64)].form
-        == a[2, 1][np.array([], dtype=np.int64)].form
-    )
     assert to_list(a[2, 1, np.array([], dtype=np.int64)]) == []
-    assert (
-        a.to_typetracer()[2, 1, np.array([], dtype=np.int64)].form
-        == a[2, 1, np.array([], dtype=np.int64)].form
-    )
     with pytest.raises(IndexError):
         a[2, 1, np.array([0], dtype=np.int64)]
     with pytest.raises(IndexError):
@@ -94,13 +81,8 @@ def test_getitem():
         a[2, 1][100:200, 200:300]
 
     assert to_list(a[2, 1][100:200, np.array([], dtype=np.int64)]) == []
-    assert (
-        a.to_typetracer()[2, 1][100:200, np.array([], dtype=np.int64)].form
-        == a[2, 1][100:200, np.array([], dtype=np.int64)].form
-    )
 
     assert to_list(a[1:, 1:]) == [[[]], [[], []]]
-    assert a.to_typetracer()[1:, 1:].form == a[1:, 1:].form
     with pytest.raises(IndexError):
         a[1:, 1:, 0]
 
