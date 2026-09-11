@@ -974,10 +974,6 @@ class RecordArray(RecordMeta[Content], Content):
             # override cannot know about it.
             if reducer.needs_position and shifts is not None:
                 assert isinstance(out, ak.contents.NumpyArray)
-                # An override may return a layout on another backend; move it
-                # back onto our backend.
-                if out.backend is not self._backend:
-                    out = out.to_backend(self._backend)
                 assert (
                     out.backend is self._backend
                     and offsets.nplike is self._backend.nplike

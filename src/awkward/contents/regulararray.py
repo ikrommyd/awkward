@@ -404,12 +404,9 @@ class RegularArray(RegularMeta[Content], Content):
         if self._backend.nplike.any(where >= self.length):
             raise ak._errors.index_error(self, where)
 
-        if where.shape[0] is unknown_length:
-            nextcarry = ak.index.Index64.empty(unknown_length, self._backend.nplike)
-        else:
-            nextcarry = ak.index.Index64.empty(
-                where.shape[0] * self._size, self._backend.nplike
-            )
+        nextcarry = ak.index.Index64.empty(
+            where.shape[0] * self._size, self._backend.nplike
+        )
         assert nextcarry.nplike is self._backend.nplike
         self._maybe_index_error(
             self._backend[
@@ -472,8 +469,7 @@ class RegularArray(RegularMeta[Content], Content):
             count = offsets.data[1:] - offsets.data[:-1]
             # Sanity check that our kernel isn't losing values here
             assert (
-                count.size is unknown_length
-                or count.size == 0
+                count.size == 0
                 or count.dtype == np.intp
                 or self._backend.nplike.max(count) <= np.iinfo(np.intp).max
             )
@@ -1107,11 +1103,7 @@ class RegularArray(RegularMeta[Content], Content):
                         outcontent.offsets[outcontent.offsets.length - 1],
                     )
                     trimmed = outcontent.content._getitem_range(start, stop)
-                    assert (
-                        trimmed.length is unknown_length
-                        or outcontent.length is unknown_length
-                        or trimmed.length == self._size * outcontent.length
-                    )
+                    assert trimmed.length == self._size * outcontent.length
                     outcontent = ak.contents.RegularArray(
                         trimmed,
                         size=self._size,
@@ -1122,11 +1114,7 @@ class RegularArray(RegularMeta[Content], Content):
 
             # In the offsets representation the output offsets are the offsets we
             # already hold (the old parents->offsets conversion is unnecessary).
-            assert (
-                offsets.length is unknown_length
-                or outlength is unknown_length
-                or offsets.length == outlength + 1
-            )
+            assert offsets.length == outlength + 1
             outoffsets = offsets
 
             return ak.contents.ListOffsetArray(outoffsets, outcontent, parameters=None)
@@ -1200,8 +1188,7 @@ class RegularArray(RegularMeta[Content], Content):
             )
             max_code_points = backend.nplike.index_as_shape_item(_max_code_points[0])
             # Ensure that we have at-least length-1 bytestrings
-            if max_code_points is not unknown_length:
-                max_code_points = max(1, max_code_points)
+            max_code_points = max(1, max_code_points)
 
             # Allocate the correct size buffer
             total_code_points = max_code_points * self.length

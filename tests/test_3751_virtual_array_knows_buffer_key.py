@@ -6,7 +6,6 @@ import pytest
 
 import awkward as ak
 
-# taken from test_2719_typetracer_buffer_key.py
 form = ak.forms.from_dict(
     {
         "class": "RecordArray",

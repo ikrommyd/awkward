@@ -28,8 +28,7 @@ def zip_no_broadcast(
     """Combines arrays into a collection of records or tuples without broadcasting.
 
     Caution: unlike #ak.zip this function will _not_ broadcast the arrays
-    together. During typetracing, it assumes that the given arrays have already
-    the same layouts and lengths.
+    together. The given arrays must already have the same layouts and lengths.
 
     This operation may be thought of as the opposite of projection in
     #ak.Array.__getitem__, which extracts fields one at a time, or #ak.unzip,

@@ -254,11 +254,7 @@ def _layout_has_type(layout: ak.contents.Content, type_: ak.types.Type) -> bool:
     elif layout.is_regular:
         return (
             isinstance(type_, ak.types.RegularType)
-            and (
-                layout.size is unknown_length
-                or type_.size is unknown_length
-                or layout.size == type_.size
-            )
+            and (type_.size is unknown_length or layout.size == type_.size)
             and _layout_has_type(layout.content, type_.content)
         )
     elif layout.is_list:
@@ -830,11 +826,7 @@ def _recurse_union_union(
             _total_used_tags += layout.backend.nplike.count_nonzero(layout_tag_is_i)
         # Is the new union of the same length as the original?
         total_used_tags = layout.backend.nplike.index_as_shape_item(_total_used_tags)
-        if not (
-            total_used_tags is unknown_length
-            or layout.length is unknown_length
-            or total_used_tags == layout.length
-        ):
+        if not (layout.length is unknown_length or total_used_tags == layout.length):
             raise ValueError("union conversion must not be lossless")
 
         return layout.copy(
@@ -1057,7 +1049,7 @@ def _recurse_list_any(
                 content=_enforce_type(layout_regular.content, type_.content),
             )
 
-        elif layout_regular.size is unknown_length or layout_regular.size == type_.size:
+        elif layout_regular.size == type_.size:
             return layout_regular.copy(
                 # The result of `to_RegularArray` should already be packed
                 content=_enforce_type(layout_regular.content, type_.content),

@@ -50,9 +50,6 @@ or
         allow_record=False,
     )
 
-    if ak.backend(array) != "cpu":
-        raise ValueError("""Only 'cpu' backend conversions are allowed""")
-
     with tf.device("CPU:0"):
         if isinstance(array, ak.contents.numpyarray.NumpyArray):
             values = array.data

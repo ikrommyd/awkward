@@ -121,11 +121,7 @@ def _impl(array, counts, axis, highlevel, behavior, attrs):
     axis = regularize_axis(axis, none_allowed=False)
 
     if is_integer_like(maybe_counts_layout):
-        # Regularize unknown values to unknown lengths
-        if maybe_counts_layout is unknown_length:
-            counts = unknown_length
-        else:
-            counts = int(counts)
+        counts = int(counts)
         current_offsets = None
     else:
         if maybe_counts_layout.is_indexed and not maybe_counts_layout.is_option:
@@ -164,12 +160,8 @@ def _impl(array, counts, axis, highlevel, behavior, attrs):
 
         nplike = layout.backend.nplike
 
-        if isinstance(counts, int) or counts is unknown_length:
-            if (
-                counts is not unknown_length
-                and layout.length is not unknown_length
-                and not 0 <= counts <= layout.length
-            ):
+        if isinstance(counts, int):
+            if layout.length is not unknown_length and not 0 <= counts <= layout.length:
                 raise ValueError("too large counts for array or negative counts")
             out = ak.contents.RegularArray(layout, counts)
 
@@ -182,13 +174,9 @@ def _impl(array, counts, axis, highlevel, behavior, attrs):
                 )[0]
                 - 1
             )
-            if (
-                current_offsets.size is not unknown_length
-                and layout.length is not unknown_length
-                and (
-                    position >= current_offsets.size
-                    or current_offsets[position] != layout.length
-                )
+            if layout.length is not unknown_length and (
+                position >= current_offsets.size
+                or current_offsets[position] != layout.length
             ):
                 raise ValueError(
                     "structure imposed by 'counts' does not fit in the array or partition "
@@ -286,10 +274,8 @@ def _impl(array, counts, axis, highlevel, behavior, attrs):
 
         out = ak._do.recursively_apply(layout, apply)
 
-    if (
-        current_offsets is not None
-        and current_offsets.size is not unknown_length
-        and not (current_offsets.size == 1 and current_offsets[0] == 0)
+    if current_offsets is not None and not (
+        current_offsets.size == 1 and current_offsets[0] == 0
     ):
         raise ValueError(
             "structure imposed by 'counts' does not fit in the array or partition "
