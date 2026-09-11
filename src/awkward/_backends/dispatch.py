@@ -147,8 +147,6 @@ def find_virtual_backend(obj: type):
         def finder(obj: VirtualNDArray):
             if isinstance(obj.nplike, ak._nplikes.numpy.Numpy):
                 return _name_to_backend_cls["cpu"].instance()
-            elif isinstance(obj.nplike, ak._nplikes.cupy.Cupy):
-                return _name_to_backend_cls["cuda"].instance()
             else:
                 raise TypeError(
                     f"The nplike {type(obj.nplike)} does not support virtual arrays"

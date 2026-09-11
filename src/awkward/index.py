@@ -7,7 +7,6 @@ import copy
 import awkward as ak
 from awkward._nplikes import to_nplike
 from awkward._nplikes.array_like import ArrayLike, maybe_materialize
-from awkward._nplikes.cupy import Cupy
 from awkward._nplikes.dispatch import nplike_of_obj
 from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import NumpyLike, NumpyMetadata
@@ -171,10 +170,6 @@ class Index:
         return int(self.length)
 
     @property
-    def __cuda_array_interface__(self):
-        return self._data.__cuda_array_interface__  # type: ignore[attr-defined]
-
-    @property
     def __array_interface__(self):
         return self._data.__array_interface__  # type: ignore[attr-defined]
 
@@ -247,8 +242,6 @@ class Index:
         if hasattr(out, "shape") and len(out.shape) != 0:
             # indexing never changes the dtype, so the concrete subclass is known
             return type(self)(out, metadata=self._metadata, nplike=self._nplike)
-        elif Cupy.is_own_array(out) and len(out.shape) == 0:
-            return out.item()
         else:
             return out
 

@@ -1,8 +1,6 @@
 # BSD 3-Clause License; see https://github.com/scikit-hep/awkward/blob/main/LICENSE
 
 
-import re
-
 import awkward as ak
 from awkward._dispatch import high_level_function
 
@@ -13,9 +11,8 @@ __all__ = ("from_tensorflow",)
 def from_tensorflow(array):
     """Converts a TensorFlow Tensor into an Awkward Array.
 
-    A tensor on a GPU is not copied: its buffer is shared through DLPack. A
-    tensor on a CPU is copied, because a NumPy array is mutable and a
-    TensorFlow tensor is not.
+    The tensor is copied into main memory (from its device, if need be),
+    because a NumPy array is mutable and a TensorFlow tensor is not.
 
     If `array` contains any other data types the function raises an error.
 
@@ -52,25 +49,6 @@ or
             """only a TensorFlow Tensor can be converted to Awkward Array"""
         )
 
-    # keep the resulting array on the same device as input tensor
-    device = array.backing_device
-    matched_device = re.match(".*:(CPU|GPU):[0-9]+", device)
-
-    if matched_device is None:
-        raise NotImplementedError(
-            f"TensorFlow device has an unexpected format: {device!r}"
-        )
-    elif matched_device.groups()[0] == "GPU":
-        from awkward._nplikes.cupy import Cupy
-
-        cp = Cupy.instance()
-        # zero-copy data exchange through DLPack
-        cp_array = cp.from_dlpack(tf.experimental.dlpack.to_dlpack(array))
-        ak_array = ak.from_cupy(cp_array)
-
-    elif matched_device.groups()[0] == "CPU":
-        # this makes a copy unfortunately, since numpy is mutable and TensorFlow tensor is not
-        np_array = array.numpy()
-        ak_array = ak.from_numpy(np_array)
-
-    return ak_array
+    # this makes a copy (from the tensor's device, if need be), since a NumPy
+    # array is mutable and a TensorFlow tensor is not
+    return ak.from_numpy(array.numpy())

@@ -10,15 +10,14 @@ __all__ = ("to_cudf",)
 def to_cudf(array):
     """Converts an Awkward Array into a cuDF Series.
 
-    Buffers that are not already in GPU memory will be transferred, and some
-    structural reformatting may happen to account for differences in
-    architecture.
+    The array is converted to Arrow in main memory (see #ak.to_arrow), and
+    cuDF copies it to the GPU. Regular dimensions become variable-length
+    lists, and categorical data become cuDF categoricals. Types that cuDF
+    cannot represent, such as unions, raise an error.
 
-    This function requires the `cudf` library (< 25.12.00) and a compatible
-    GPU. cuDF versions 25.12.00 and later are not currently supported due to
-    incompatible changes in cuDF internals.
+    This function requires the `cudf` library and a compatible GPU.
 
-    See also #ak.to_cupy, #ak.from_cupy, #ak.to_dataframe.
+    See also #ak.to_cupy, #ak.to_arrow, #ak.to_dataframe.
 
     Args:
         array: Array-like data (anything #ak.to_layout recognizes).
@@ -45,17 +44,22 @@ or
     conda install -c rapidsai cudf cuda-version=13"""
         ) from err
 
-    from packaging.version import parse as parse_version
-
-    if parse_version(cudf.__version__) >= parse_version("25.12.00"):
-        raise NotImplementedError(
-            f"ak.to_cudf is not supported for cudf >= 25.12.00 (you have {cudf.__version__}). "
-            "cudf internals changed in ways that are incompatible with the current implementation"
-        )
-
     layout = ak.to_layout(array, allow_record=False)
 
-    if hasattr(cudf.Series, "_from_column"):
-        return cudf.Series._from_column(layout._to_cudf(cudf, None, len(layout)))
-    # older Series invocation
-    return cudf.Series(layout._to_cudf(cudf, None, len(layout)))
+    # cuDF has no fixed-size lists
+    layout = ak.operations.ak_from_regular._impl(
+        layout, axis=None, highlevel=False, behavior=None, attrs=None
+    )
+
+    arrow_array = ak.operations.ak_to_arrow._impl(
+        layout,
+        # cuDF lists and strings have 32-bit offsets
+        list_to32=True,
+        string_to32=True,
+        bytestring_to32=True,
+        emptyarray_to="float64",
+        categorical_as_dictionary=True,
+        extensionarray=False,
+        count_nulls=True,
+    )
+    return cudf.Series.from_arrow(arrow_array)

@@ -2,7 +2,6 @@
 
 
 import awkward as ak
-from awkward._backends.cupy import CupyBackend
 from awkward._dispatch import high_level_function
 
 __all__ = ("to_cupy",)
@@ -18,7 +17,7 @@ def to_cupy(array):
 
     Otherwise, the function raises an error.
 
-    If `array` is a scalar, it is converted into a CuPy scalar.
+    The data are copied from main memory to the current CuPy device.
 
     See also #ak.from_cupy and #ak.to_numpy.
 
@@ -36,9 +35,19 @@ def to_cupy(array):
 
 
 def _impl(array):
-    layout = ak.to_layout(array, allow_record=False)
+    try:
+        import cupy
+    except ModuleNotFoundError as err:
+        raise ModuleNotFoundError(
+            """to use ak.to_cupy, you must install the 'cupy' package with:
 
-    backend = CupyBackend.instance()
-    cupy_layout = layout.to_backend(backend)
+    pip install cupy
 
-    return cupy_layout.to_backend_array(allow_missing=False)
+or
+
+    conda install -c conda-forge cupy"""
+        ) from err
+
+    numpy_array = ak.operations.ak_to_numpy._impl(array, allow_missing=False)
+
+    return cupy.asarray(numpy_array)

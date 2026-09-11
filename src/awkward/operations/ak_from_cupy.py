@@ -19,8 +19,7 @@ def from_cupy(
 ):
     """Converts a CuPy array into an Awkward Array.
 
-    The data is not copied: the Awkward Array shares the CuPy array's GPU
-    buffer.
+    The data are copied from the GPU into main memory.
 
     The resulting layout may involve the following #ak.contents.Content types
     (only):
@@ -47,8 +46,28 @@ def from_cupy(
     Returns:
         An #ak.Array built from the given CuPy array.
     """
+    try:
+        import cupy
+    except ModuleNotFoundError as err:
+        raise ModuleNotFoundError(
+            """to use ak.from_cupy, you must install the 'cupy' package with:
+
+    pip install cupy
+
+or
+
+    conda install -c conda-forge cupy"""
+        ) from err
+
+    if not isinstance(array, cupy.ndarray):
+        raise TypeError(
+            f"only CuPy arrays can be converted by ak.from_cupy, not {type(array).__name__}"
+        )
+
     return wrap_layout(
-        from_arraylib(array, regulararray, False, primitive_policy=primitive_policy),
+        from_arraylib(
+            cupy.asnumpy(array), regulararray, False, primitive_policy=primitive_policy
+        ),
         highlevel=highlevel,
         behavior=behavior,
         attrs=attrs,

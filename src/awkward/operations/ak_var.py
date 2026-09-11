@@ -255,7 +255,7 @@ def _impl(x, weight, ddof, axis, keepdims, mask_identity, highlevel, behavior, a
             and axis is not None
             and depth_min == depth_max
             and posaxis == depth_max - 1
-            and ak.backend(x) in ("cpu", "cuda")
+            and ak.backend(x) == "cpu"
         ):
             # Fused centered sum-of-squares: Sigma (x - mean)**2 per segment in a
             # single pass -- no materialised deviation buffer and no back-broadcast

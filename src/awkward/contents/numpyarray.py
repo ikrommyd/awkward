@@ -14,7 +14,6 @@ from awkward._layout import maybe_posaxis
 from awkward._meta.numpymeta import NumpyMeta
 from awkward._nplikes import to_nplike
 from awkward._nplikes.array_like import ArrayLike, maybe_materialize
-from awkward._nplikes.cupy import Cupy
 from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import IndexType, NumpyMetadata
 from awkward._nplikes.placeholder import PlaceholderArray
@@ -62,7 +61,7 @@ numpy = Numpy.instance()
 class NumpyArray(NumpyMeta, Content):
     """
     A NumpyArray describes 1-dimensional or rectilinear data using a NumPy
-    `np.ndarray`, a CuPy `cp.ndarray`, etc., depending on the backend.
+    `np.ndarray` (or the array type of the backend, if not NumPy).
 
     This class is aware of the rectilinear array's `shape` and `strides`, and
     allows for arbitrary `strides`, such as Fortran-ordered data. However, many
@@ -1187,20 +1186,6 @@ class NumpyArray(NumpyMeta, Content):
                 validbytes, options["count_nulls"]
             ),
         )
-
-    def _to_cudf(self, cudf: Any, mask: Content | None, length: int):
-        cupy = Cupy.instance()
-        from cudf.core.column.column import as_column
-
-        assert self._backend.nplike.known_data
-        data = as_column(*maybe_materialize(self._data))
-        if mask is not None:
-            m = cupy.packbits(cupy.asarray(mask), bitorder="little")
-            if m.nbytes % 64:
-                m = cupy.resize(m, ((m.nbytes // 64) + 1) * 64)
-            m = cudf.core.buffer.as_buffer(m)
-            data.set_base_data(m)
-        return data
 
     def _to_backend_array(self, allow_missing, backend):
         return to_nplike(

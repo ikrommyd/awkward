@@ -136,12 +136,10 @@ def prepare_layout(layout: T) -> T | str | bytes:
 class Array(NDArrayOperatorsMixin, Iterable, Sized):
     """
     Args:
-        data (#ak.contents.Content, #ak.Array, `np.ndarray`, `cp.ndarray`, `pyarrow.*`, str, dict, or iterable):
+        data (#ak.contents.Content, #ak.Array, `np.ndarray`, `pyarrow.*`, str, dict, or iterable):
             Data to wrap or convert into an array.
                - If a NumPy array, the regularity of its dimensions is preserved
                  and the data are viewed, not copied.
-               - CuPy arrays are treated the same way as NumPy arrays except that
-                 they default to `backend="cuda"`, rather than `backend="cpu"`.
                - If a pyarrow object, calls #ak.from_arrow, preserving as much
                  metadata as possible, usually zero-copy.
                - If a dict of str \u2192 columns, combines the columns into an
@@ -153,9 +151,9 @@ class Array(NDArrayOperatorsMixin, Iterable, Sized):
         with_name (None or str): Gives tuples and records a name that can be
             used to override their behavior (see below).
         check_valid (bool): If True, verify that the #layout is valid.
-        backend (None, `"cpu"`, `"cuda"`): If `"cpu"`, the Array will be placed in
-            main memory for use with other `"cpu"` Arrays and Records; if `"cuda"`,
-            the Array will be placed in GPU global memory using CUDA. If None, the
+        backend (None, `"cpu"`, `"typetracer"`): If `"cpu"`, the Array will be placed
+            in main memory for use with other `"cpu"` Arrays and Records; if
+            `"typetracer"`, the Array will be a data-less typetracer. If None, the
             `data` are left untouched.
 
     High-level array that can contain data of any type.
@@ -1828,9 +1826,9 @@ class Record(NDArrayOperatorsMixin):
         with_name (None or str): Gives the record type a name that can be
             used to override its behavior (see below).
         check_valid (bool): If True, verify that the #layout is valid.
-        backend (None, `"cpu"`, `"cuda"`): If `"cpu"`, the Array will be placed in
-            main memory for use with other `"cpu"` Arrays and Records; if `"cuda"`,
-            the Array will be placed in GPU global memory using CUDA. If None, the
+        backend (None, `"cpu"`, `"typetracer"`): If `"cpu"`, the Array will be placed
+            in main memory for use with other `"cpu"` Arrays and Records; if
+            `"typetracer"`, the Array will be a data-less typetracer. If None, the
             `data` are left untouched.
 
     High-level record that can contain fields of any type.

@@ -12,9 +12,6 @@ on:
       run-header-only-tests:
         description: Whether or not run the header-only tests
         value: ${{ jobs.change-detection.outputs.run-header-only-tests || false }}
-      run-gpu-kernel-tests:
-        description: Whether or not run the gpu kernel tests
-        value: ${{ jobs.change-detection.outputs.run-gpu-kernel-tests || false }}
 
 permissions:
   contents: read
@@ -28,7 +25,6 @@ jobs:
       run-tests: ${{ steps.code-changes.outputs.run-tests || false }}
       build-wheels: ${{ steps.cpp-changes.outputs.build-wheels || false }}
       run-header-only-tests: ${{ steps.header-changes.outputs.run-header-only-tests || false }}
-      run-gpu-kernel-tests: ${{ steps.gpu-changes.outputs.run-gpu-kernel-tests || false }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -100,24 +96,3 @@ jobs:
           steps.changed-header-files.outputs.added_modified_renamed != '[]'
         id: header-changes
         run: echo "run-header-only-tests=true" >> "${GITHUB_OUTPUT}"
-
-      - name: Changed GPU code files
-        id: changed-gpu-files
-        uses: Ana06/get-changed-files@25f79e676e7ea1868813e21465014798211fad8c # v2.3.0
-        with:
-          format: "json"
-          filter: |
-            .github/workflows/ci.yml
-            .github/workflows/reusable-test.yml
-            dev/**
-            kernel-specification.yml
-            kernel-test-data.json
-            src/awkward/_backends/cupy.py
-            src/awkward/_connect/cuda/**
-            src/awkward/_kernels.py
-            tests-cuda/**
-            tests/properties/**
-      - name: Set a flag for running the GPU tests
-        if: steps.changed-gpu-files.outputs.added_modified_renamed != '[]'
-        id: gpu-changes
-        run: echo "run-gpu-kernel-tests=true" >> "${GITHUB_OUTPUT}"

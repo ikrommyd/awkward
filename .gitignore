@@ -7,7 +7,6 @@ docs/demos/test-program.cpp
 .clangd/
 
 # Generated files
-src/awkward/_connect/cuda/_kernel_signatures.py
 src/awkward/_connect/header-only
 src/awkward/_version.py
 
@@ -16,9 +15,6 @@ awkward-cpp/tests-cpu-kernels
 awkward-cpp/tests-cpu-kernels-explicit
 awkward-cpp/tests-spec
 awkward-cpp/tests-spec-explicit
-tests-cuda-kernels
-tests-cuda-kernels-explicit
-tests-cuda-kernels-explicit-parametrized
 
 # to use all-contributors-cli without adding it to the project
 node_modules
@@ -88,9 +84,6 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-cuda-kernels/include
-cuda-kernels/src
-cuda-kernels/VERSION_INFO
 
 # Virtual Environment folder is not needed
 venv
