@@ -204,9 +204,6 @@ class PlaceholderArray(MaterializableArray):
     def __cupy_get_ndarray__(self):
         self.materialize()
 
-    def __jax_array__(self):
-        self.materialize()
-
     @property
     def __array_interface__(self):
         self.materialize()

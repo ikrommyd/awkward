@@ -153,10 +153,10 @@ class Array(NDArrayOperatorsMixin, Iterable, Sized):
         with_name (None or str): Gives tuples and records a name that can be
             used to override their behavior (see below).
         check_valid (bool): If True, verify that the #layout is valid.
-        backend (None, `"cpu"`, `"jax"`, `"cuda"`): If `"cpu"`, the Array will be placed in
+        backend (None, `"cpu"`, `"cuda"`): If `"cpu"`, the Array will be placed in
             main memory for use with other `"cpu"` Arrays and Records; if `"cuda"`,
-            the Array will be placed in GPU global memory using CUDA; if `"jax"`, the structure
-            is copied to the CPU for use with JAX. if None, the `data` are left untouched.
+            the Array will be placed in GPU global memory using CUDA. If None, the
+            `data` are left untouched.
 
     High-level array that can contain data of any type.
 
@@ -265,17 +265,6 @@ class Array(NDArrayOperatorsMixin, Iterable, Sized):
     Arrays are convertible to and from [Apache Arrow](https://arrow.apache.org/),
     a standard for representing nested data structures in columnar arrays.
     See #ak.to_arrow and #ak.from_arrow.
-
-    JAX
-    ********
-
-    Derivatives of a calculation on an #ak.Array (s) can be calculated with
-    [JAX](https://github.com/google/jax#readme), but only if the array
-    functions in `ak` / `numpy` are used, not the functions in the `jax`
-    library directly (apart from e.g. `jax.grad`).
-
-    Like NumPy ufuncs, the function and its derivatives are evaluated on the
-    numeric leaves of the data structure, maintaining structure in the output.
     """
 
     def __init__(
@@ -365,11 +354,6 @@ class Array(NDArrayOperatorsMixin, Iterable, Sized):
 
         if check_valid:
             ak.operations.validity_error(self, exception=True)
-
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-
-        ak.jax.register_behavior_class(cls)
 
     _histogram_module_ = awkward._connect.hist
 
@@ -1827,10 +1811,10 @@ class Record(NDArrayOperatorsMixin):
         with_name (None or str): Gives the record type a name that can be
             used to override its behavior (see below).
         check_valid (bool): If True, verify that the #layout is valid.
-        backend (None, `"cpu"`, `"jax"`, `"cuda"`): If `"cpu"`, the Array will be placed in
+        backend (None, `"cpu"`, `"cuda"`): If `"cpu"`, the Array will be placed in
             main memory for use with other `"cpu"` Arrays and Records; if `"cuda"`,
-            the Array will be placed in GPU global memory using CUDA; if `"jax"`, the structure
-            is copied to the CPU for use with JAX. if None, the `data` are left untouched.
+            the Array will be placed in GPU global memory using CUDA. If None, the
+            `data` are left untouched.
 
     High-level record that can contain fields of any type.
 
@@ -1927,11 +1911,6 @@ class Record(NDArrayOperatorsMixin):
 
         if check_valid:
             ak.operations.validity_error(self, exception=True)
-
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-
-        ak.jax.register_behavior_class(cls)
 
     def _update_class(self, restore=None):
         self._numbaview = None
