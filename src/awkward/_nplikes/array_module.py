@@ -841,7 +841,7 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLikeT]):
         # This kinda breaks the type(obj) -> ownership paradigm, but I don't see a simpler way for virtual arrays.
         # We are required to know if different nplikes own virtual arrays throughout the code
         # and that can only be determined by the underlying nplike of the virtual array
-        # as virtual arrays can generate either numpy or cupy ndarrays.
+        # as virtual arrays can generate the ndarrays of any nplike that supports them.
         # The VirtualNDArray type is now enough. We need the underlying nplike to determine ownership.
         # All nplikes implement an ndarray property so we can can use that.
         # There is an extra isinstance check here but that has to live somewhere in the code either way to determine ownership.

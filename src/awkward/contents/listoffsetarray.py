@@ -10,7 +10,6 @@ from awkward._backends.backend import Backend
 from awkward._layout import maybe_posaxis
 from awkward._meta.listoffsetmeta import ListOffsetMeta
 from awkward._nplikes.array_like import ArrayLike, maybe_materialize
-from awkward._nplikes.cupy import Cupy
 from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import IndexType, NumpyMetadata
 from awkward._nplikes.placeholder import PlaceholderArray
@@ -1775,58 +1774,6 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
                 null_count=ak._connect.pyarrow.to_null_count(
                     validbytes, options["count_nulls"]
                 ),
-            )
-
-    def _to_cudf(self, cudf: Any, mask: Content | None, length: int):
-        from packaging.version import parse as parse_version
-
-        cupy = Cupy.instance()
-        index = maybe_materialize(self._offsets.raw(cupy))[0].astype("int32")
-        buf = cudf.core.buffer.as_buffer(index)
-
-        if parse_version(cudf.__version__) >= parse_version("24.10.00"):
-            ind_buf = cudf.core.column.numerical.NumericalColumn(
-                data=buf, dtype=index.dtype, mask=None, size=len(index)
-            )
-        else:
-            ind_buf = cudf.core.column.numerical.NumericalColumn(
-                buf, index.dtype, None, size=len(index)
-            )
-        cont = self._content._to_cudf(cudf, None, len(self._content))
-        if mask is not None:
-            m = cupy._module.packbits(mask, bitorder="little")
-            if m.nbytes % 64:
-                m = cupy.resize(m, ((m.nbytes // 64) + 1) * 64)
-            m = cudf.core.buffer.as_buffer(cupy.asarray(m))
-        else:
-            m = None
-        if self.parameters.get("__array__") == "string":
-            from cudf.core.column.string import StringColumn
-            from cudf.utils.dtypes import CUDF_STRING_DTYPE
-
-            data = cudf.core.buffer.as_buffer(cupy.asarray(self._content.data))
-            return StringColumn(
-                data=data,
-                size=len(ind_buf) - 1,
-                dtype=CUDF_STRING_DTYPE,
-                mask=m,
-                children=(ind_buf,),
-            )
-
-        if parse_version(cudf.__version__) >= parse_version("24.10.00"):
-            return cudf.core.column.lists.ListColumn(
-                size=length,
-                data=None,
-                mask=m,
-                children=(ind_buf, cont),
-                dtype=cudf.core.dtypes.ListDtype(cont.dtype),
-            )
-        else:
-            return cudf.core.column.lists.ListColumn(
-                length,
-                mask=m,
-                children=(ind_buf, cont),
-                dtype=cudf.core.dtypes.ListDtype(cont.dtype),
             )
 
     def _to_backend_array(self, allow_missing, backend):

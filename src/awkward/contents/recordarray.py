@@ -1174,23 +1174,6 @@ class RecordArray(RecordMeta[Content], Content):
             children=values,
         )
 
-    def _to_cudf(self, cudf: Any, mask: Content | None, length: int):
-        children = tuple(
-            c._to_cudf(cudf, mask=None, length=length) for c in self.contents
-        )
-        dt = cudf.core.dtypes.StructDtype(
-            {field: c.dtype for field, c in zip(self.fields, children, strict=True)}
-        )
-        m = mask._to_cudf(cudf, None, length) if mask else None
-        return cudf.core.column.struct.StructColumn(
-            data=None,
-            children=children,
-            dtype=dt,
-            mask=m,
-            size=length,
-            offset=0,
-        )
-
     def _to_backend_array(self, allow_missing, backend):
         contents = [x._to_backend_array(allow_missing, backend) for x in self._contents]
         if any(len(x.shape) != 1 for x in contents):

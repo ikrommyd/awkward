@@ -34,7 +34,7 @@ version_match = os.environ.get("DOCS_VERSION", version)
 canonical_version = os.environ.get("DOCS_CANONICAL_VERSION")
 report_analytics = os.environ.get("DOCS_REPORT_ANALYTICS", False)
 show_version_switcher = os.environ.get("DOCS_SHOW_VERSION", False)
-run_cuda_notebooks = os.environ.get("DOCS_RUN_CUDA", False)
+run_cppyy_notebooks = os.environ.get("DOCS_RUN_CPPYY", False)
 
 # -- General configuration ---------------------------------------------------
 
@@ -354,10 +354,8 @@ nb_execution_show_tb = True
 # Increase cell execution timeout (seconds)
 nb_execution_timeout = 120  # two minutes per cell
 
-if not run_cuda_notebooks:
+if not run_cppyy_notebooks:
     nb_execution_excludepatterns = [
-        # We have no CUDA executors, so disable this
-        "user-guide/how-to-use-in-numba-cuda.ipynb",
         # We have no cppyy 3.0.1 yet, so disable this
         "user-guide/how-to-use-in-cpp-cppyy.ipynb",
     ]

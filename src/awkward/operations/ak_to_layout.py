@@ -12,7 +12,6 @@ import awkward as ak
 from awkward._backends.numpy import NumpyBackend
 from awkward._backends.typetracer import TypeTracerBackend
 from awkward._dispatch import high_level_function
-from awkward._nplikes.cupy import Cupy
 from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import NumpyMetadata
 from awkward._nplikes.typetracer import TypeTracer
@@ -46,9 +45,9 @@ def to_layout(
     Args:
         array: Array-like data. May be a high level #ak.Array, #ak.Record (if `allow_record`),
             #ak.ArrayBuilder, or low-level #ak.contents.Content, #ak.record.Record (if `allow_record`),
-            or a supported backend array (NumPy `ndarray`, CuPy `ndarray`),
-            data-less TypeTracer, Arrow object, DLPack-aware array, or an arbitrary
-            Python iterable (for #ak.from_iter to convert).
+            or a supported backend array (NumPy `ndarray`), data-less TypeTracer,
+            Arrow object, DLPack-aware array, or an arbitrary Python iterable (for
+            #ak.from_iter to convert).
         allow_record (bool): If True, allow #ak.record.Record as an output;
             otherwise, if the output would be a scalar record, raise an error.
         allow_unknown (bool): If True, allow non-Awkward outputs; otherwise,
@@ -176,16 +175,6 @@ def _impl(
             obj,
             regulararray=regulararray,
             recordarray=True,
-            highlevel=False,
-            primitive_policy=primitive_policy,
-        )
-        return _handle_array_like(
-            obj, promoted_layout, primitive_policy=primitive_policy
-        )
-    elif Cupy.is_own_array(obj):
-        promoted_layout = ak.operations.from_cupy(
-            obj,
-            regulararray=regulararray,
             highlevel=False,
             primitive_policy=primitive_policy,
         )

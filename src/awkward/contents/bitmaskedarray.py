@@ -10,8 +10,7 @@ from collections.abc import Mapping, MutableMapping, Sequence
 import awkward as ak
 from awkward._backends.backend import Backend
 from awkward._meta.bitmaskedmeta import BitMaskedMeta
-from awkward._nplikes.array_like import ArrayLike, maybe_materialize
-from awkward._nplikes.cupy import Cupy
+from awkward._nplikes.array_like import ArrayLike
 from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import IndexType, NumpyMetadata
 from awkward._nplikes.placeholder import PlaceholderArray
@@ -733,23 +732,6 @@ class BitMaskedArray(BitMaskedMeta[Content], Content):
         return self.to_ByteMaskedArray()._to_arrow(
             pyarrow, mask_node, validbytes, length, options
         )
-
-    def _to_cudf(self, cudf: Any, mask: Content | None, length: int):
-        cp = Cupy.instance()._module
-
-        assert mask is None  # this class has its own mask
-        (mask,) = maybe_materialize(self._mask.data)
-        if not self.lsb_order:
-            m = cp.flip(cp.packbits(cp.flip(cp.unpackbits(cp.asarray(mask)))))
-        else:
-            m = mask
-
-        if m.nbytes % 64:
-            m = cp.resize(m, ((m.nbytes // 64) + 1) * 64)
-        m = cudf.core.buffer.as_buffer(m)
-        inner = self._content._to_cudf(cudf, mask=None, length=length)
-        inner = inner.set_mask(m)
-        return inner
 
     def _to_backend_array(self, allow_missing, backend):
         return self.to_ByteMaskedArray()._to_backend_array(allow_missing, backend)

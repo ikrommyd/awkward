@@ -5,20 +5,8 @@ on:
     - cron: 0 12 1 * *
 
   workflow_call:
-    inputs:
-      run-gpu-kernel-tests:
-        description: Run the gpu kernel tests
-        required: false
-        default: false
-        type: string # The workflow freezes if this is set to boolean for some reason
 
   workflow_dispatch:
-    inputs:
-      run-gpu-kernel-tests:
-        description: Run the gpu kernel tests
-        required: false
-        default: false
-        type: boolean
 
 permissions:
   contents: read
@@ -175,63 +163,6 @@ jobs:
         run: |
           python -m pip install 'pytest-run-parallel>=0.8.2'
           python -m pytest -vv -rs tests --parallel-threads 4 --ignore=tests/test_3364_virtualarray.py --ignore=tests/test_3475_virtualarray_unknown_length.py
-
-  run-gpu-tests:
-    name: Run GPU Tests
-    if: github.event_name != 'schedule' || github.repository_owner == 'scikit-hep'
-
-    runs-on: self-hosted
-
-    env:
-      PIP_ONLY_BINARY: numpy,pandas,pyarrow,numexpr,numexpr
-
-    # Required for miniconda to activate conda
-    defaults:
-      run:
-        shell: bash -l {0}
-
-    strategy:
-      fail-fast: false
-      matrix:
-        cuda-version:
-          - 12
-          - 13
-
-    steps:
-      - name: Clean the workspace and mamba
-        run: |
-          rm -rf * .[!.]* || echo "Nothing to clean"
-          rm -rf ~/micromamba* || echo "Nothing to clean"
-
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          submodules: true
-          persist-credentials: false
-
-      - name: Set up GPU test environment
-        uses: ./.github/actions/setup-gpu-env
-        with:
-          cuda-version: ${{ matrix.cuda-version }}
-
-      - name: Test CUDA kernels
-        if: ${{ fromJSON(inputs.run-gpu-kernel-tests) }}
-        run: python -m pytest -vv -rs tests-cuda-kernels
-
-      - name: Test CUDA kernels with explicitly defined values
-        if: ${{ fromJSON(inputs.run-gpu-kernel-tests) }}
-        run: python -m pytest -vv -rs tests-cuda-kernels-explicit
-
-      - name: Test kernel property-based tests
-        if: ${{ fromJSON(inputs.run-gpu-kernel-tests) }}
-        run: python -m pytest -vv -rs tests/properties -m cuda
-
-      - name: Test CUDA non-kernel (Python)
-        run: >-
-          python -m pytest -vv -rs tests-cuda --ignore=tests-cuda/test_3459_virtualarray_with_cuda.py
-
-      - name: Test CUDA virtual arrays
-        run: >-
-          python -m pytest -vv -rs tests-cuda/test_3459_virtualarray_with_cuda.py
 
   Linux-ROOT:
     name: Linux ROOT

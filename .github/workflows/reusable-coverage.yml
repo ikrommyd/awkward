@@ -60,17 +60,10 @@ jobs:
         with:
           environment-name: test-env
           init-shell: bash
-          # TODO: run the tests with cudf again when it supports numba-cuda>=0.23.0
           create-args: >-
-            -c rapidsai
             python=${{ env.PYTHON_VERSION }}
             pandas>=0.24.0
-            cccl-python>=1.0.2
-            cupy>=14
-            cuda-version=13
-            cuda-toolkit
             cxx-compiler
-            numba-cuda
             root=6.36.06
             pipx
 
@@ -101,22 +94,12 @@ jobs:
         run: python -m pip list
 
       - name: Install test requirements
-        run: python -m pip install -v -r requirements-test-full.txt -r requirements-test-gpu.txt
+        run: python -m pip install -v -r requirements-test-full.txt
 
       - name: Test
         run: >-
           python -m pytest -vv -rs tests --cov=awkward --cov-report=term
-          --cov-report=xml:non-cuda-coverage.xml --junitxml=junit.xml -o junit_family=legacy
-
-      - name: Test CUDA
-        run: >-
-          python -m pytest -vv -rs tests-cuda --ignore=tests-cuda/test_3459_virtualarray_with_cuda.py
-          --cov=awkward --cov-report=term --cov-report=xml:cuda-coverage.xml
-
-      - name: Test CUDA virtual arrays
-        run: >-
-          python -m pytest -vv -rs tests-cuda/test_3459_virtualarray_with_cuda.py
-          --cov=awkward --cov-report=term --cov-report=xml:cuda-virtual-coverage.xml
+          --cov-report=xml:coverage.xml --junitxml=junit.xml -o junit_family=legacy
 
       - name: Upload Codecov results
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v6

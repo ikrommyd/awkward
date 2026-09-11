@@ -68,7 +68,6 @@ init = "awkward.numba:_register"
 packages = ["src/awkward"]
 artifacts = [
     "/src/awkward/_connect/header-only",
-    "/src/awkward/_connect/cuda/_kernel_signatures.py"
 ]
 
 [tool.hatch.build.targets.wheel.force-include]
@@ -81,7 +80,6 @@ path = "src/awkward/_version.py"
 include = [
     "/src",
     "/tests",
-    "/tests-cuda",
     "/docs-img",
     "/docs",
     "/CITATION.cff",
@@ -93,9 +91,7 @@ include = [
     "/requirements-test-minimal.txt"
 ]
 artifacts = [
-    "/tests-cuda-kernels",
     "/src/awkward/_connect/header-only",
-    "/src/awkward/_connect/cuda/_kernel_signatures.py"
 ]
 
 [tool.hatch.metadata.hooks.fancy-pypi-readme]
@@ -129,20 +125,16 @@ addopts = [
     "--strict-config",
 ]
 xfail_strict = true
-markers = [
-    "cuda: marks tests that require a CUDA-capable GPU",
-]
 filterwarnings = [
     "error",
     "ignore:the imp module is deprecated in favour of importlib:DeprecationWarning",
     "ignore:The NumPy module was reloaded:UserWarning",
     "ignore:.*np\\.MachAr.*:DeprecationWarning",
     "ignore:module 'sre_.*' is deprecated:DeprecationWarning",
-    "ignore:Jitify is performing a one-time only warm-up",
     "ignore::awkward.errors.ExperimentalWarning",
 ]
 log_level = "INFO"
-testpaths = ["tests", "tests-cuda", "tests-cuda-kernels", "tests-cuda-kernels-explicit"]
+testpaths = ["tests"]
 
 [tool.pylint]
 py-version = "3.10"
@@ -267,7 +259,6 @@ extend-exclude = [
     "docs-*",
     "src/awkward/_typeparser/generated_parser.py",
     "src/awkward/types/_awkward_datashape_parser.py",
-    "src/awkward/_connect/cuda/_kernel_signatures.py",
 ]
 
 [tool.ruff.lint]
@@ -323,7 +314,6 @@ mccabe.max-complexity = 100
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "numpy".msg = "Use `numpy = ak._nplikes.Numpy.instance()` instead"
-"cupy".msg = "Use `cupy = ak._nplikes.Cupy.instance()` instead"
 
 [tool.uv]
 exclude-newer = "7 days"

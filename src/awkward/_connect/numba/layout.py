@@ -543,12 +543,7 @@ def regularize_atval(context, builder, viewproxy, attype, atval, wrapneg, checkb
                     builder.icmp_signed(">=", atval, length),
                 )
             ):
-                call_conv = (
-                    context.fndesc.call_conv
-                    if context.__class__.__name__ == "CUDATargetContext"
-                    else context.call_conv
-                )
-                call_conv.return_user_exc(
+                context.call_conv.return_user_exc(
                     builder, ValueError, ("slice index out of bounds",)
                 )
 

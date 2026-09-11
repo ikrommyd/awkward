@@ -201,15 +201,8 @@ class PlaceholderArray(MaterializableArray):
     def __array__(self, dtype=None, copy=None):
         self.materialize()
 
-    def __cupy_get_ndarray__(self):
-        self.materialize()
-
     @property
     def __array_interface__(self):
-        self.materialize()
-
-    @property
-    def __cuda_array_interface__(self):
         self.materialize()
 
     def __dlpack_device__(self):

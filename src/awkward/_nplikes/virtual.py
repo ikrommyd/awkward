@@ -392,16 +392,9 @@ class VirtualNDArray(NDArrayOperatorsMixin, MaterializableArray):
             self.materialize(), dtype=dtype, copy=copy
         )
 
-    def __cupy_get_ndarray__(self) -> ArrayLike:
-        return ak._nplikes.cupy.Cupy.instance().asarray(self.materialize())
-
     @property
     def __array_interface__(self) -> dict[str, Any]:
         return self.materialize().__array_interface__  # type: ignore[attr-defined]
-
-    @property
-    def __cuda_array_interface__(self) -> dict[str, Any]:
-        return self.materialize().__cuda_array_interface__  # type: ignore[attr-defined]
 
     def __dlpack_device__(self) -> tuple[int, int]:
         return self.materialize().__dlpack_device__()  # type: ignore[attr-defined]

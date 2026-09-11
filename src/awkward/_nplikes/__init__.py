@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import awkward._nplikes.cupy
 import awkward._nplikes.numpy
 import awkward._nplikes.typetracer
 import awkward._nplikes.virtual
@@ -49,11 +48,5 @@ def to_nplike(
         raise TypeError(
             "Converting from an nplike without known data to an nplike with known data is not supported"
         )
-
-    # Copy to host memory
-    if isinstance(from_nplike, awkward._nplikes.cupy.Cupy) and not isinstance(
-        nplike, awkward._nplikes.cupy.Cupy
-    ):
-        array = array.get()  # type: ignore[attr-defined]
 
     return nplike.asarray(array)
