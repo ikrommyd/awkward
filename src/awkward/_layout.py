@@ -65,7 +65,7 @@ def promote_integral_to_float64(array):
 
     Floating and complex data is returned unchanged, so there is no copy for the
     common (already-floating) case. The cast is performed by the array's own
-    backend, so on GPU it stays on device -- no host transfer.
+    backend.
     """
     if _has_integral_leaf(array.layout):
         return ak.operations.ak_values_astype._impl(
