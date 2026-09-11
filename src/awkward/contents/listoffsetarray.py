@@ -1391,7 +1391,7 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
         nplike = self._backend.nplike
         nextlen = nplike.index_as_shape_item(self._offsets[-1] - self._offsets[0])
         # Clamp nextlen to actual content length to avoid out-of-bounds access
-        if nextlen is not unknown_length and self.content.length is not unknown_length:
+        if self.content.length is not unknown_length:
             nextlen = min(nextlen, self.content.length)
         lenstarts = self._offsets.length - 1
 
@@ -1419,14 +1419,10 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
 
         nextcarry = Index64.empty(nextlen, nplike=nplike)
         _maxnextparents = Index64.empty(1, nplike)
-        if maxcount is unknown_length or outlength is unknown_length:
-            distincts = Index64.empty(unknown_length, nplike)
-            nextoffsets = Index64.empty(unknown_length, nplike)
-        else:
-            distincts = Index64.empty(outlength * maxcount, nplike)
-            # Pessimistic upper bound: maxnextparents + 1 <= outlength * maxcount,
-            # so nextoffsets has at most outlength * maxcount + 1 entries.
-            nextoffsets = Index64.empty(outlength * maxcount + 1, nplike)
+        distincts = Index64.empty(outlength * maxcount, nplike)
+        # Pessimistic upper bound: maxnextparents + 1 <= outlength * maxcount,
+        # so nextoffsets has at most outlength * maxcount + 1 entries.
+        nextoffsets = Index64.empty(outlength * maxcount + 1, nplike)
 
         assert (
             _maxnextparents.nplike is nplike
@@ -1750,8 +1746,7 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
             )
             max_code_points = backend.nplike.index_as_shape_item(_max_code_points[0])
             # Ensure that we have at-least length-1 bytestrings
-            if max_code_points is not unknown_length:
-                max_code_points = max(1, max_code_points)
+            max_code_points = max(1, max_code_points)
 
             # Allocate the correct size buffer
             total_code_points = max_code_points * self.length
@@ -1781,8 +1776,7 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
                 )
 
             # Ensure that we have at-least length-1 bytestrings
-            if max_count is not unknown_length:
-                max_count = max(1, max_count)
+            max_count = max(1, max_count)
 
             buffer = backend.nplike.empty(max_count * self.length, dtype=np.uint8)
 

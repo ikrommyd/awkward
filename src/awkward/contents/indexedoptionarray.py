@@ -1331,13 +1331,7 @@ class IndexedOptionArray(IndexedOptionMeta[Content], Content):
             )
 
         inject_nones = (
-            True
-            if (
-                (numnull is not unknown_length and numnull > 0)
-                and not branch
-                and negaxis != depth
-            )
-            else False
+            True if (numnull > 0 and not branch and negaxis != depth) else False
         )
 
         if inject_nones:
@@ -1454,15 +1448,10 @@ class IndexedOptionArray(IndexedOptionMeta[Content], Content):
                     "reduce_next with unbranching depth > negaxis expects a "
                     f"ListOffsetArray whose offsets start at zero ({starts[0]})"
                 )
-            if starts.length is unknown_length:
-                outoffsets = ak.index.Index64.empty(
-                    unknown_length, self._backend.nplike
-                )
-            else:
-                outoffsets = ak.index.Index64.empty(
-                    starts.length + 1,
-                    self._backend.nplike,
-                )
+            outoffsets = ak.index.Index64.empty(
+                starts.length + 1,
+                self._backend.nplike,
+            )
             assert (
                 outoffsets.nplike is self._backend.nplike
                 and starts.nplike is self._backend.nplike

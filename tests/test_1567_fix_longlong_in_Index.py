@@ -26,7 +26,7 @@ def test_fix_longlong_type_passed_to_index_1530():
     ]
 
 
-def test_typetracer_view_method():
+def test_view_method():
     a = np.asarray([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], dtype=np.longlong)
     b = ak.contents.NumpyArray(a)
     c = np.array([7, 3, 3, 5], dtype=np.longlong)

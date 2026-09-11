@@ -1229,9 +1229,7 @@ class ListArray(ListMeta[Content], Content):
             return self._local_index_axis0()
         elif posaxis is not None and posaxis + 1 == depth + 1:
             offsets = self._compact_offsets64(True)
-            innerlength = self._backend.nplike.index_as_shape_item(
-                offsets[-1]
-            )  # todo: removed touch_data?
+            innerlength = self._backend.nplike.index_as_shape_item(offsets[-1])
             localindex = ak.index.Index64.empty(innerlength, self._backend.nplike)
             assert (
                 localindex.nplike is self._backend.nplike
@@ -1385,9 +1383,7 @@ class ListArray(ListMeta[Content], Content):
                     )
                 )
                 min_ = self._backend.nplike.index_as_shape_item(_min[0])
-                # TODO: Replace the kernel call with below code once typtracer supports '-'
-                # min_ = self._backend.nplike.min(self._stops.data - self._starts.data)
-                if min_ is not unknown_length and target < min_:
+                if target < min_:
                     return self
                 else:
                     _tolength = ak.index.Index64.empty(1, self._backend.nplike)

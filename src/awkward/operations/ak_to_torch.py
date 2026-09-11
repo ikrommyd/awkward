@@ -46,9 +46,6 @@ or
     # useful function that handles all possible input arrays
     array = ak.to_layout(array, allow_record=False)
 
-    if ak.backend(array) != "cpu":
-        raise ValueError("Only 'cpu' backend conversions are allowed")
-
     try:
         backend_array = array.to_backend_array(allow_missing=False)
     except ValueError as err:

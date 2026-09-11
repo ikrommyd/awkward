@@ -431,8 +431,7 @@ class ArrayModuleNumpyLike(NumpyLike[ArrayLikeT], metaclass=NominalMeta):
             length: length of layout
 
         Return a tuple of (start, stop, step) indices into a layout, suitable for
-        `_getitem_range` (if step == 1). Normalize lengths to fit length of array,
-        and for arrays with unknown lengths, these offsets become none.
+        `_getitem_range` (if step == 1). Normalize lengths to fit length of array.
         """
         # The slice items are known, so we can safely convert them to int
         slice_as_shape = slice(
