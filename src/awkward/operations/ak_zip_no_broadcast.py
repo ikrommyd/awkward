@@ -171,12 +171,7 @@ def _impl(
                 )
             contents.append(layout.content)
 
-        # check the offsets, but only those that have actual data, i.e. no
-        # PlaceholderArrays, so first, let's filter out any PlaceholderArrays
-        comparable_offsets = filter(
-            lambda o: not isinstance(o, ak._nplikes.placeholder.PlaceholderArray),
-            (layout.offsets for layout in layouts),
-        )
+        comparable_offsets = (layout.offsets for layout in layouts)
         # check that offsets are the same
         first = next(comparable_offsets)
         if not all(
@@ -211,7 +206,7 @@ def _impl(
 
 def _check_equal_lengths(
     contents: ak.contents.Content,
-) -> int | ak._nplikes.shape.UnknownLength:
+) -> int:
     length = contents[0].length
     for layout in contents:
         if layout.length != length:

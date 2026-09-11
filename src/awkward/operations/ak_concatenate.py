@@ -221,15 +221,11 @@ def _impl(arrays, axis, mergebool, highlevel, behavior, attrs):
                         nextinputs.append(x)
                 inputs = nextinputs
 
-            # Ensure the lengths agree, taking known lengths over unknown lengths
+            # Ensure the lengths agree
             length = None
             for x in inputs:
                 if isinstance(x, ak.contents.Content):
                     if length is None:
-                        length = x.length
-                    elif x.length is unknown_length:
-                        continue
-                    elif length is unknown_length:
                         length = x.length
                     elif length != x.length:
                         raise ValueError(

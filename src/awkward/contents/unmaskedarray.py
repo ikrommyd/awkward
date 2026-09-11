@@ -13,7 +13,7 @@ from awkward._meta.unmaskedmeta import UnmaskedMeta
 from awkward._nplikes.array_like import ArrayLike
 from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import IndexType, NumpyMetadata
-from awkward._nplikes.shape import ShapeItem, unknown_length
+from awkward._nplikes.shape import ShapeItem
 from awkward._parameters import (
     parameters_intersect,
     parameters_union,
@@ -224,9 +224,6 @@ class UnmaskedArray(UnmaskedMeta[Content], Content):
     def _getitem_nothing(self):
         return self._content._getitem_range(0, 0)
 
-    def _is_getitem_at_placeholder(self) -> bool:
-        return self._content._is_getitem_at_placeholder()
-
     def _is_getitem_at_virtual(self) -> bool:
         return self._content._is_getitem_at_virtual()
 
@@ -330,7 +327,7 @@ class UnmaskedArray(UnmaskedMeta[Content], Content):
             raise AxisError("axis=0 not allowed for flatten")
         else:
             offsets, flattened = self._content._offsets_and_flattened(axis, depth)
-            if offsets.length is not unknown_length and offsets.length == 0:
+            if offsets.length == 0:
                 return (
                     offsets,
                     UnmaskedArray(flattened, parameters=self._parameters),
@@ -396,12 +393,12 @@ class UnmaskedArray(UnmaskedMeta[Content], Content):
         )
 
     def _is_unique(self, negaxis, starts, offsets, outlength):
-        if self._content.length is not unknown_length and self._content.length == 0:
+        if self._content.length == 0:
             return True
         return self._content._is_unique(negaxis, starts, offsets, outlength)
 
     def _unique(self, negaxis, starts, offsets, outlength):
-        if self._content.length is not unknown_length and self._content.length == 0:
+        if self._content.length == 0:
             return self
         return self._content._unique(negaxis, starts, offsets, outlength)
 

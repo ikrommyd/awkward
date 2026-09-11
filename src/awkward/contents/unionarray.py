@@ -14,7 +14,6 @@ from awkward._meta.unionmeta import UnionMeta
 from awkward._nplikes.array_like import ArrayLike, maybe_materialize
 from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import IndexType, NumpyMetadata
-from awkward._nplikes.placeholder import PlaceholderArray
 from awkward._nplikes.shape import ShapeItem, unknown_length
 from awkward._nplikes.virtual import VirtualNDArray
 from awkward._parameters import parameters_intersect, parameters_union
@@ -548,16 +547,6 @@ class UnionArray(UnionMeta[Content], Content):
     def _getitem_nothing(self):
         return self._getitem_range(0, 0)
 
-    def _is_getitem_at_placeholder(self) -> bool:
-        if isinstance(self._tags.data, PlaceholderArray) or isinstance(
-            self._index.data, PlaceholderArray
-        ):
-            return True
-        for content in self._contents:
-            if content._is_getitem_at_placeholder():
-                return True
-        return False
-
     def _is_getitem_at_virtual(self) -> bool:
         is_virtual_tags = (
             isinstance(self._tags.data, VirtualNDArray)
@@ -693,9 +682,7 @@ class UnionArray(UnionMeta[Content], Content):
 
     def project(self, index):
         lentags = self._tags.length
-        assert (
-            self._index.length is unknown_length or lentags is unknown_length
-        ) or self._index.length >= lentags
+        assert self._index.length >= lentags
         lenout = ak.index.Index64.empty(1, self._backend.nplike)
         tmpcarry = ak.index.Index64.empty(lentags, self._backend.nplike)
         assert (
@@ -1313,7 +1300,7 @@ class UnionArray(UnionMeta[Content], Content):
             parameters=self._parameters,
             mergebool=True,
         )
-        if simplified.length is not unknown_length and simplified.length == 0:
+        if simplified.length == 0:
             return ak.contents.NumpyArray(
                 self._backend.nplike.empty(0, dtype=np.int64),
                 parameters=None,
@@ -1328,7 +1315,7 @@ class UnionArray(UnionMeta[Content], Content):
         )
 
     def _sort_next(self, negaxis, starts, offsets, outlength, ascending, stable):
-        if self.length is not unknown_length and self.length == 0:
+        if self.length == 0:
             return self
 
         simplified = type(self).simplified(
@@ -1338,7 +1325,7 @@ class UnionArray(UnionMeta[Content], Content):
             parameters=self._parameters,
             mergebool=True,
         )
-        if simplified.length is not unknown_length and simplified.length == 0:
+        if simplified.length == 0:
             return simplified
 
         if isinstance(simplified, ak.contents.UnionArray):
@@ -1608,10 +1595,7 @@ class UnionArray(UnionMeta[Content], Content):
             is_tag = tags == tag
             num_tag = nplike.index_as_shape_item(nplike.count_nonzero(is_tag))
 
-            if (
-                contents[tag].length is not unknown_length
-                and contents[tag].length > num_tag
-            ):
+            if contents[tag].length > num_tag:
                 if original_index is index:
                     index = index.copy()
                 new_index_values = self._backend.nplike.arange(

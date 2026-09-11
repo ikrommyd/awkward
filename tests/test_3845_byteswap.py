@@ -168,14 +168,6 @@ def test_timedelta64(unit, shape):
     _check(values, shape)
 
 
-def test_placeholder():
-    from awkward._nplikes.placeholder import PlaceholderArray
-
-    ph = PlaceholderArray(nplike, shape=(10,), dtype=np.dtype(np.int32))
-    result = nplike.byteswap(ph)
-    assert result is ph
-
-
 def test_virtual():
     from awkward._nplikes.virtual import VirtualNDArray
 

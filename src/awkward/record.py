@@ -13,7 +13,6 @@ from awkward._backends.dispatch import (
 from awkward._behavior import get_record_class
 from awkward._layout import wrap_layout
 from awkward._nplikes.numpy_like import NumpyMetadata
-from awkward._nplikes.shape import unknown_length
 from awkward._regularize import is_integer
 from awkward._typing import JSONSerializable, Self
 from awkward._util import UNSET
@@ -42,7 +41,7 @@ class Record:
             raise TypeError(f"Record 'array' must be a RecordArray, not {array!r}")
         if not is_integer(at):
             raise TypeError(f"Record 'at' must be an integer, not {at!r}")
-        if not (array.length is unknown_length or 0 <= at < array.length):
+        if not (0 <= at < array.length):
             raise ValueError(
                 f"Record 'at' must be >= 0 and < len(array) == {array.length}, not {at}"
             )
@@ -187,7 +186,7 @@ class Record:
         return self._array._getitem_fields(where)._getitem_at(self._at)
 
     def to_packed(self, recursive: bool = True) -> Self:
-        if self._array.length is not unknown_length and self._array.length == 1:
+        if self._array.length == 1:
             return Record(self._array.to_packed(recursive), self._at)
         else:
             return Record(self._array[self._at : self._at + 1].to_packed(recursive), 0)

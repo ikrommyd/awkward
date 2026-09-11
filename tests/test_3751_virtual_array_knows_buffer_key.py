@@ -2,7 +2,6 @@
 
 
 import numpy as np
-import pytest
 
 import awkward as ak
 
@@ -40,37 +39,3 @@ def test_buffer_keys_on_virtual_arrays():
 
     assert va.layout.content("x").offsets.data.buffer_key == "x.list-offsets"
     assert va.layout.content("x").content.data.buffer_key == "x.list.content-data"
-
-
-def test_buffer_keys_on_placeholder_arrays():
-    buffers = {
-        "x.list-offsets": ak._nplikes.placeholder.PlaceholderArray(
-            shape=(4,),
-            dtype=np.int64,
-            buffer_key="x.list-offsets",
-            nplike=ak._nplikes.numpy.Numpy.instance(),
-        ),
-        "x.list.content-data": ak._nplikes.placeholder.PlaceholderArray(
-            shape=(5,),
-            dtype=np.int64,
-            buffer_key="x.list.content-data",
-            nplike=ak._nplikes.numpy.Numpy.instance(),
-        ),
-    }
-
-    pa = ak.from_buffers(form, 3, buffers, buffer_key="{form_key}-{attribute}")
-
-    assert pa.layout.content("x").offsets.data.buffer_key == "x.list-offsets"
-    assert pa.layout.content("x").content.data.buffer_key == "x.list.content-data"
-
-    with pytest.raises(
-        RuntimeError,
-        match=r"Awkward Array tried to access a buffer at 'x.list-offsets'",
-    ):
-        pa.layout.content("x").offsets.data.materialize()
-
-    with pytest.raises(
-        RuntimeError,
-        match=r"Awkward Array tried to access a buffer at 'x.list.content-data'",
-    ):
-        pa.layout.content("x").content.data.materialize()

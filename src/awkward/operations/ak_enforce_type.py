@@ -650,9 +650,7 @@ def _recurse_option_any(
 
                 new_index[is_none] = -1
                 new_index[~is_none] = nplike.arange(
-                    layout.length - num_none
-                    if layout.length is not unknown_length
-                    else num_none,
+                    layout.length - num_none,
                     dtype=new_index.dtype,
                 )
                 return ak.contents.IndexedOptionArray(
@@ -826,7 +824,7 @@ def _recurse_union_union(
             _total_used_tags += layout.backend.nplike.count_nonzero(layout_tag_is_i)
         # Is the new union of the same length as the original?
         total_used_tags = layout.backend.nplike.index_as_shape_item(_total_used_tags)
-        if not (layout.length is unknown_length or total_used_tags == layout.length):
+        if total_used_tags != layout.length:
             raise ValueError("union conversion must not be lossless")
 
         return layout.copy(
@@ -1042,7 +1040,7 @@ def _recurse_list_any(
         layout_regular = layout.to_RegularArray()
 
         # Empty arrays can have any size!
-        if layout_regular.length is not unknown_length and layout_regular.length == 0:
+        if layout_regular.length == 0:
             return layout_regular.copy(
                 # Correct the size
                 size=type_.size,

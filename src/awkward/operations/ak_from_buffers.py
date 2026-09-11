@@ -11,7 +11,6 @@ from awkward._layout import wrap_layout
 from awkward._nplikes.array_like import ArrayLike
 from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import NumpyLike, NumpyMetadata
-from awkward._nplikes.placeholder import PlaceholderArray
 from awkward._nplikes.shape import ShapeItem, unknown_length
 from awkward._nplikes.virtual import VirtualNDArray
 from awkward._regularize import is_integer
@@ -221,17 +220,21 @@ def _from_buffer(
             )
         return buffer
 
-    elif callable(buffer):
-        # This is the case where we automatically create VirtualNDArrays
+    elif callable(buffer) or count is unknown_length:
+        # This is the case where we automatically create VirtualNDArrays: either
+        # from a callable, or from a concrete buffer whose length depends on a
+        # virtual buffer that has not been materialized yet (the concrete buffer
+        # is then trimmed once that length is known).
         # We use recursion here to pass down the from_buffer and byteorder transformations to the generator
         assert callable(shape_generator), "shape_generator must be callable"
         cached_shape_generator = lru_cache(maxsize=1)(shape_generator)
+        raw_generator = buffer if callable(buffer) else lambda: buffer
 
         def generator():
             (length,) = cached_shape_generator()
             return _from_buffer(
                 nplike,
-                buffer(),
+                raw_generator(),
                 dtype,
                 length,
                 byteorder,
@@ -242,7 +245,7 @@ def _from_buffer(
 
         # also store a ref to the original/raw buffer generator
         # this allows us to access it later again
-        generator.__awkward_raw_generator__ = buffer
+        generator.__awkward_raw_generator__ = raw_generator
 
         return VirtualNDArray(
             nplike=nplike,
@@ -254,19 +257,7 @@ def _from_buffer(
             __wrap_generator_asarray__=True,
             __enable_caching__=enable_virtualarray_caching,
         )
-    # Unknown-length information implies that we didn't load shape-buffers (offsets, etc)
-    # for the parent of this node. Thus, this node and its children *must* only
-    # contain placeholders
-    elif count is unknown_length:
-        # We may actually have a known buffer here, but as we do not know the length,
-        # we cannot safely trim it. Thus, introduce a placeholder anyway
-        return PlaceholderArray(nplike, (unknown_length,), dtype, buffer_key)
-    # Known-length information implies that we should have known-length buffers here
-    # We could choose to make this an error, and have the caller re-implement some
-    # of #ak.from_buffers, or we can just introduce the known lengths where possible
-    elif isinstance(buffer, PlaceholderArray) and buffer.size is unknown_length:
-        return PlaceholderArray(nplike, (count,), dtype, buffer_key)
-    elif isinstance(buffer, PlaceholderArray) or nplike.is_own_array(buffer):
+    elif nplike.is_own_array(buffer):
         # Require 1D buffers
         array = nplike.reshape(buffer.view(dtype), shape=(-1,), copy=False)
         array = ak._util.native_to_byteorder(array, byteorder)
@@ -467,7 +458,7 @@ def _reconstitute(
         def _shape_generator():
             return (_adjust_length(index),)
 
-        if isinstance(index, (PlaceholderArray, VirtualNDArray)):
+        if isinstance(index, VirtualNDArray):
             next_length = unknown_length
         else:
             next_length = _adjust_length(index)
@@ -517,7 +508,7 @@ def _reconstitute(
         def _shape_generator():
             return (_adjust_length(index),)
 
-        if isinstance(index, (PlaceholderArray, VirtualNDArray)):
+        if isinstance(index, VirtualNDArray):
             next_length = unknown_length
         else:
             next_length = _adjust_length(index)
@@ -583,9 +574,7 @@ def _reconstitute(
         def _shape_generator():
             return (_adjust_length(starts, stops),)
 
-        if isinstance(starts, (PlaceholderArray, VirtualNDArray)) or isinstance(
-            stops, (PlaceholderArray, VirtualNDArray)
-        ):
+        if isinstance(starts, VirtualNDArray) or isinstance(stops, VirtualNDArray):
             next_length = unknown_length
         else:
             next_length = _adjust_length(starts, stops)
@@ -637,7 +626,7 @@ def _reconstitute(
         def _shape_generator():
             return (_adjust_length(offsets),)
 
-        if isinstance(offsets, (PlaceholderArray, VirtualNDArray)):
+        if isinstance(offsets, VirtualNDArray):
             next_length = unknown_length
         else:
             next_length = _adjust_length(offsets)
@@ -767,9 +756,7 @@ def _reconstitute(
 
             _shape_generators.append(partial(_shape_generator, tag=tag))
 
-        if isinstance(index, (PlaceholderArray, VirtualNDArray)) or isinstance(
-            tags, (PlaceholderArray, VirtualNDArray)
-        ):
+        if isinstance(index, VirtualNDArray) or isinstance(tags, VirtualNDArray):
             lengths = [unknown_length] * len(form.contents)
         else:
             lengths = []

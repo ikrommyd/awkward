@@ -12,8 +12,7 @@ from awkward._meta.indexedoptionmeta import IndexedOptionMeta
 from awkward._nplikes.array_like import ArrayLike, maybe_materialize
 from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import IndexType, NumpyMetadata
-from awkward._nplikes.placeholder import PlaceholderArray
-from awkward._nplikes.shape import ShapeItem, unknown_length
+from awkward._nplikes.shape import ShapeItem
 from awkward._nplikes.virtual import VirtualNDArray
 from awkward._parameters import (
     parameters_intersect,
@@ -265,12 +264,7 @@ class IndexedOptionArray(IndexedOptionMeta[Content], Content):
             carry[too_negative] = -1
         carry = ak.index.Index(carry)
 
-        if (
-            self._content.length is not unknown_length
-            and self._content.length == 0
-            and carry.length is not unknown_length
-            and carry.length != 0
-        ):
+        if self._content.length == 0 and carry.length != 0:
             # The content is empty but the mask is not, so the (clamped) carry
             # only references the missing values that we are about to mask out.
             # We need a length-one dummy content for those carry entries to point
@@ -304,11 +298,6 @@ class IndexedOptionArray(IndexedOptionMeta[Content], Content):
 
     def _getitem_nothing(self):
         return self._content._getitem_range(0, 0)
-
-    def _is_getitem_at_placeholder(self) -> bool:
-        if isinstance(self._index.data, PlaceholderArray):
-            return True
-        return self._content._is_getitem_at_placeholder()
 
     def _is_getitem_at_virtual(self) -> bool:
         is_virtual = (
@@ -602,7 +591,7 @@ class IndexedOptionArray(IndexedOptionMeta[Content], Content):
 
             offsets, flattened = next._offsets_and_flattened(axis, depth)
 
-            if offsets.length is not unknown_length and offsets.length == 0:
+            if offsets.length == 0:
                 return (
                     offsets,
                     ak.contents.IndexedOptionArray(
@@ -945,7 +934,7 @@ class IndexedOptionArray(IndexedOptionMeta[Content], Content):
         )
 
         next = self._content._carry(nextcarry, False)
-        if nextstarts.length is not unknown_length and nextstarts.length > 1:
+        if nextstarts.length > 1:
             return next._is_subrange_equal(nextstarts, nextstops, nextstarts.length)
         else:
             return next._subranges_equal(
@@ -960,7 +949,7 @@ class IndexedOptionArray(IndexedOptionMeta[Content], Content):
         )
 
     def _is_unique(self, negaxis, starts, offsets, outlength):
-        if self._index.length is not unknown_length and self._index.length == 0:
+        if self._index.length == 0:
             return True
 
         projected = self.project()

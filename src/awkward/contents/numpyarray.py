@@ -15,8 +15,7 @@ from awkward._nplikes import to_nplike
 from awkward._nplikes.array_like import ArrayLike, maybe_materialize
 from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import IndexType, NumpyMetadata
-from awkward._nplikes.placeholder import PlaceholderArray
-from awkward._nplikes.shape import ShapeItem, unknown_length
+from awkward._nplikes.shape import ShapeItem
 from awkward._nplikes.virtual import VirtualNDArray
 from awkward._parameters import (
     parameters_intersect,
@@ -292,9 +291,6 @@ class NumpyArray(NumpyMeta, Content):
             parameters=None,
             backend=self._backend,
         )
-
-    def _is_getitem_at_placeholder(self) -> bool:
-        return isinstance(self._data, PlaceholderArray)
 
     def _is_getitem_at_virtual(self) -> bool:
         is_virtual = (
@@ -698,7 +694,7 @@ class NumpyArray(NumpyMeta, Content):
             )
 
     def _is_unique(self, negaxis, starts, offsets, outlength):
-        if self.length is not unknown_length and self.length == 0:
+        if self.length == 0:
             return True
         elif len(self.shape) != 1:
             return self.to_RegularArray()._is_unique(
@@ -717,15 +713,12 @@ class NumpyArray(NumpyMeta, Content):
         else:
             out = self._unique(negaxis, starts, offsets, outlength)
             if isinstance(out, ak.contents.ListOffsetArray):
-                return (
-                    out.content.length is not unknown_length
-                    and out.content.length == self.length
-                )
+                return out.content.length == self.length
             else:
-                return out.length is not unknown_length and out.length == self.length
+                return out.length == self.length
 
     def _unique(self, negaxis, starts, offsets, outlength):
-        if self.shape[0] is not unknown_length and self.shape[0] == 0:
+        if self.shape[0] == 0:
             return self
 
         elif len(self.shape) == 0:
@@ -1091,10 +1084,10 @@ class NumpyArray(NumpyMeta, Content):
         if len(self.shape) == 0:
             return f"at {path} ({type(self)!r}): shape is zero-dimensional"
         for i, dim in enumerate(self.shape):
-            if dim is not unknown_length and dim < 0:
+            if dim < 0:
                 return f"at {path} ({type(self)!r}): shape[{i}] < 0"
         for i, stride in enumerate(self.strides):
-            if stride is not unknown_length and stride % self.dtype.itemsize != 0:
+            if stride % self.dtype.itemsize != 0:
                 return f"at {path} ({type(self)!r}): strides[{i}] % itemsize != 0"
         return ""
 
@@ -1109,7 +1102,7 @@ class NumpyArray(NumpyMeta, Content):
         if posaxis is not None and posaxis + 1 != depth:
             raise AxisError(f"axis={axis} exceeds the depth of this array ({depth})")
         if not clip:
-            if self.length is unknown_length or target < self.length:
+            if target < self.length:
                 return self
             else:
                 return self._pad_none(target, axis, depth, clip=True)
@@ -1321,10 +1314,7 @@ class NumpyArray(NumpyMeta, Content):
                 # Contents agree
                 and (self._backend.nplike.array_equal(self.data, other.data))
                 # Shapes agree
-                and all(
-                    x is unknown_length or y is unknown_length or x == y
-                    for x, y in zip(self.shape, other.shape, strict=True)
-                )
+                and self.shape == other.shape
             )
         )
 

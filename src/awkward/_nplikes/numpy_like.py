@@ -24,7 +24,6 @@ from awkward.errors import AxisError
 if TYPE_CHECKING:
     from numpy.typing import DTypeLike
 
-    from awkward._nplikes.placeholder import PlaceholderArray
     from awkward._nplikes.virtual import VirtualNDArray
 
 
@@ -149,14 +148,12 @@ class NumpyLike(PublicSingleton, Protocol[ArrayLikeT]):
         *,
         dtype: DTypeLike | None = None,
         copy: bool | None = None,
-    ) -> ArrayLikeT | PlaceholderArray | VirtualNDArray: ...
+    ) -> ArrayLikeT | VirtualNDArray: ...
 
     # FIXME: find a way to express TypeVar(..., OtherTypeVar(...), FOO) such that
     #        this function preserves the type identity of the input
     @abstractmethod
-    def ascontiguousarray(
-        self, x: ArrayLikeT | PlaceholderArray
-    ) -> ArrayLikeT | PlaceholderArray | VirtualNDArray: ...
+    def ascontiguousarray(self, x: ArrayLikeT) -> ArrayLikeT | VirtualNDArray: ...
 
     @abstractmethod
     def frombuffer(
@@ -201,18 +198,18 @@ class NumpyLike(PublicSingleton, Protocol[ArrayLikeT]):
 
     @abstractmethod
     def zeros_like(
-        self, x: ArrayLikeT | PlaceholderArray, *, dtype: DTypeLike | None = None
+        self, x: ArrayLikeT, *, dtype: DTypeLike | None = None
     ) -> ArrayLikeT: ...
 
     @abstractmethod
     def ones_like(
-        self, x: ArrayLikeT | PlaceholderArray, *, dtype: DTypeLike | None = None
+        self, x: ArrayLikeT, *, dtype: DTypeLike | None = None
     ) -> ArrayLikeT: ...
 
     @abstractmethod
     def full_like(
         self,
-        x: ArrayLikeT | PlaceholderArray,
+        x: ArrayLikeT,
         fill_value,
         *,
         dtype: DTypeLike | None = None,
@@ -281,11 +278,11 @@ class NumpyLike(PublicSingleton, Protocol[ArrayLikeT]):
     @abstractmethod
     def reshape(
         self,
-        x: ArrayLikeT | PlaceholderArray,
+        x: ArrayLikeT,
         shape: tuple[ShapeItem, ...],
         *,
         copy: bool | None = None,
-    ) -> ArrayLikeT | PlaceholderArray | VirtualNDArray: ...
+    ) -> ArrayLikeT | VirtualNDArray: ...
 
     @abstractmethod
     def nonzero(self, x: ArrayLikeT) -> tuple[ArrayLikeT, ...]: ...
@@ -356,7 +353,7 @@ class NumpyLike(PublicSingleton, Protocol[ArrayLikeT]):
     ) -> ArrayLikeT: ...
 
     @abstractmethod
-    def strides(self, x: ArrayLikeT | PlaceholderArray) -> tuple[ShapeItem, ...]: ...
+    def strides(self, x: ArrayLikeT) -> tuple[ShapeItem, ...]: ...
 
     @abstractmethod
     def byteswap(self, x: ArrayLikeT) -> ArrayLikeT: ...
@@ -522,7 +519,7 @@ class NumpyLike(PublicSingleton, Protocol[ArrayLikeT]):
     ) -> bool: ...
 
     @abstractmethod
-    def is_c_contiguous(self, x: ArrayLikeT | PlaceholderArray) -> bool: ...
+    def is_c_contiguous(self, x: ArrayLikeT) -> bool: ...
 
     @abstractmethod
     def real(self, x: ArrayLikeT) -> ArrayLikeT: ...
