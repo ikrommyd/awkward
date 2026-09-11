@@ -54,9 +54,9 @@ There is also a custom flake8 plugin (`dev/flake8_awkward.py`) and `nox -s pylin
 - `contents/` — the layout node types (`NumpyArray`, `ListOffsetArray`, `RecordArray`, `IndexedOptionArray`, `UnionArray`, etc.), forming a tree that represents nested/ragged data columnar-wise. `index.py` holds the integer index buffers. `_do.py` contains cross-cutting operations on layouts.
 - `forms/` — metadata-only mirrors of each content type (the "form" = type + buffer structure without data), used for serialization and typetracer.
 - `_meta/` — shared base logic between contents and forms.
-- `_backends/` and `_nplikes/` — abstraction over array libraries: NumPy, CuPy, JAX, and **typetracer** (shape-only arrays with possibly-unknown lengths, used by dask-awkward to compute without data). Code in `contents/` must go through the nplike API, not call NumPy directly.
+- `_backends/` and `_nplikes/` — abstraction over array libraries: NumPy, CuPy, and **typetracer** (shape-only arrays with possibly-unknown lengths, used by dask-awkward to compute without data). Code in `contents/` must go through the nplike API, not call NumPy directly.
 - `_kernels.py` + `awkward_cpp._kernel_signatures` — how layouts invoke compiled kernels via ctypes-style signatures, per backend.
-- `_connect/` — integrations: numba, jax, pyarrow (Arrow/Parquet), numexpr, RDataFrame, cling/cppyy, cuda.
+- `_connect/` — integrations: numba, pyarrow (Arrow/Parquet), numexpr, RDataFrame, cling/cppyy, cuda.
 - `behaviors/` — built-in behaviors (e.g. strings as character lists) layered on the `ak.behavior` registry, which maps record names/parameters to Python mixin classes.
 - `_broadcasting.py`, `_slicing.py`, `_reducers.py` — the core algorithms behind ufuncs, `__getitem__`, and reductions.
 
@@ -69,7 +69,7 @@ There is also a custom flake8 plugin (`dev/flake8_awkward.py`) and `nox -s pylin
 
 The hand-written C++ implementations live in `awkward-cpp/src/cpu-kernels/` (one file per kernel) and must match the spec; `nox -s diagnostics` checks kernel definitions. Adding/changing a kernel means touching the YAML spec, the C++ implementation, and (sometimes) test data, then rebuilding `awkward-cpp` (which regenerates) or running `nox -s prepare`.
 
-**`kernel-specification.yml` is the single source of truth for all backends** — the canonical signature, semantics, edge-case behavior, and Python reference. CPU C++ and CUDA kernels must conform to it identically: Awkward guarantees cross-backend consistency (NumPy, CuPy, JAX, typetracer, compiled kernels), so any divergence breaks slicing, broadcasting, masking, union, and Dask/JAX typetracer guarantees. Do **not** introduce CUDA-only behavior, reorder arguments, change pointer/buffer types, alter edge cases, add kernels directly in C++/CUDA, or bypass the generation pipeline. GPU optimizations are fine only if semantics stay bit-for-bit identical.
+**`kernel-specification.yml` is the single source of truth for all backends** — the canonical signature, semantics, edge-case behavior, and Python reference. CPU C++ and CUDA kernels must conform to it identically: Awkward guarantees cross-backend consistency (NumPy, CuPy, typetracer, compiled kernels), so any divergence breaks slicing, broadcasting, masking, union, and Dask typetracer guarantees. Do **not** introduce CUDA-only behavior, reorder arguments, change pointer/buffer types, alter edge cases, add kernels directly in C++/CUDA, or bypass the generation pipeline. GPU optimizations are fine only if semantics stay bit-for-bit identical.
 
 To change a kernel: (1) edit `kernel-specification.yml`; (2) run the generation pipeline (rebuild `awkward-cpp`, or `nox -s prepare -- --signatures --tests`); (3) update **both** the CPU C++ and CUDA implementations to match the reference; (4) confirm `tests-spec`, `tests-cpu-kernels`, and `tests-cuda-kernels` all pass.
 

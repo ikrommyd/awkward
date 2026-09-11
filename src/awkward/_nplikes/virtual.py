@@ -371,10 +371,7 @@ class VirtualNDArray(NDArrayOperatorsMixin, MaterializableArray):
     def __setitem__(self, key, value):
         array = self.materialize()
         (value,) = maybe_materialize(value)
-        if isinstance(self._nplike, ak._nplikes.jax.Jax):
-            self._array = array.at[key].set(value)
-        else:
-            array.__setitem__(key, value)
+        array.__setitem__(key, value)
 
     def __bool__(self) -> bool:
         array = self.materialize()
@@ -410,9 +407,6 @@ class VirtualNDArray(NDArrayOperatorsMixin, MaterializableArray):
 
     def __cupy_get_ndarray__(self) -> ArrayLike:
         return ak._nplikes.cupy.Cupy.instance().asarray(self.materialize())
-
-    def __jax_array__(self) -> ArrayLike:
-        return ak._nplikes.jax.Jax.instance().asarray(self.materialize())
 
     @property
     def __array_interface__(self) -> dict[str, Any]:

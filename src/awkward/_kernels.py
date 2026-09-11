@@ -6,12 +6,9 @@ from abc import abstractmethod
 from collections.abc import Callable
 from typing import Any
 
-from packaging.version import parse as parse_version
-
 import awkward as ak
 from awkward._nplikes.array_like import maybe_materialize
 from awkward._nplikes.cupy import Cupy
-from awkward._nplikes.jax import Jax
 from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import NumpyMetadata
 from awkward._nplikes.typetracer import try_touch_data
@@ -118,46 +115,6 @@ class NumpyKernel(CTypesKernel):
         else:
             raise AssertionError(
                 f"Only NumPy buffers should be passed to Numpy Kernels, received {x}"
-            )
-
-
-class JaxKernel(CTypesKernel):
-    def __init__(self, impl: Callable[..., Any], key: KernelKeyType):
-        super().__init__(impl, key)
-
-        self._jax = Jax.instance()
-
-        jax_module = ak.jax.import_jax()
-        self._ad_tracer_types = (jax_module._src.interpreters.ad.JVPTracer,)
-        if parse_version(jax_module.__version__) >= parse_version("0.7.0"):
-            self._ad_tracer_types += (jax_module._src.interpreters.ad.LinearizeTracer,)
-
-    def _pointer_of(self, x):
-        # Do we have a JAX-owned array?
-        if self._jax.is_own_array(x):
-            if self._jax.is_tracer_type(type(x)):
-                # general message for any invalid JAX input type
-                msg = f"Encountered {x} as an (invalid) input to the '{self._key[0]}' Awkward C++ kernel."
-                # message specification for autodiff (i.e. when encountering a JVPTracer)
-                if isinstance(x, self._ad_tracer_types):
-                    msg += " This kernel is not differentiable by the JAX backend."
-                raise ValueError(msg)
-            assert self._jax.is_c_contiguous(x), "kernel expects contiguous array"
-            if x.ndim > 0:
-                if x.device.platform != "cpu":
-                    raise RuntimeError(
-                        "The JAX backend requires CPU JAX buffers to be the default. You can make CPU the default backend"
-                        " with jax.config.update('jax_platform_name', 'cpu') or by setting JAX_PLATFORM_NAME=cpu."
-                    )
-                return self._jax.memory_ptr(x)
-            else:
-                return x
-        # Or, do we have a ctypes type
-        elif hasattr(x, "_b_base_"):
-            return ctypes.cast(x, ctypes.c_void_p)
-        else:
-            raise AssertionError(
-                f"Only JAX buffers should be passed to JAX Kernels, received {x}"
             )
 
 

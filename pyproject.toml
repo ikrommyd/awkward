@@ -142,7 +142,6 @@ filterwarnings = [
     "ignore:.*np\\.MachAr.*:DeprecationWarning",
     "ignore:module 'sre_.*' is deprecated:DeprecationWarning",
     "ignore:Jitify is performing a one-time only warm-up",
-    "ignore:The JAX backend is deprecated:DeprecationWarning",
     "ignore::awkward.errors.ExperimentalWarning",
 ]
 log_level = "INFO"
@@ -328,7 +327,6 @@ mccabe.max-complexity = 100
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "numpy".msg = "Use `numpy = ak._nplikes.Numpy.instance()` instead"
-"jax".msg = "Use `jax = ak._nplikes.Jax.instance()` instead"
 "cupy".msg = "Use `cupy = ak._nplikes.Cupy.instance()` instead"
 
 [tool.uv]
