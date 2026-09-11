@@ -13,7 +13,6 @@ from awkward._meta.bytemaskedmeta import ByteMaskedMeta
 from awkward._nplikes.array_like import ArrayLike
 from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import IndexType, NumpyMetadata
-from awkward._nplikes.placeholder import PlaceholderArray
 from awkward._nplikes.shape import ShapeItem, unknown_length
 from awkward._nplikes.virtual import VirtualNDArray
 from awkward._parameters import (
@@ -327,11 +326,6 @@ class ByteMaskedArray(ByteMaskedMeta[Content], Content):
     def _getitem_nothing(self):
         return self._content._getitem_range(0, 0)
 
-    def _is_getitem_at_placeholder(self) -> bool:
-        if isinstance(self._mask.data, PlaceholderArray):
-            return True
-        return self._content._is_getitem_at_placeholder()
-
     def _is_getitem_at_virtual(self) -> bool:
         is_virtual = (
             isinstance(self._mask.data, VirtualNDArray)
@@ -632,7 +626,7 @@ class ByteMaskedArray(ByteMaskedMeta[Content], Content):
 
             offsets, flattened = next._offsets_and_flattened(axis, depth)
 
-            if offsets.length is not unknown_length and offsets.length == 0:
+            if offsets.length == 0:
                 return (
                     offsets,
                     ak.contents.IndexedOptionArray(
@@ -743,14 +737,14 @@ class ByteMaskedArray(ByteMaskedMeta[Content], Content):
         )
 
     def _is_unique(self, negaxis, starts, offsets, outlength):
-        if self._mask.length is not unknown_length and self._mask.length == 0:
+        if self._mask.length == 0:
             return True
         return self.to_IndexedOptionArray64()._is_unique(
             negaxis, starts, offsets, outlength
         )
 
     def _unique(self, negaxis, starts, offsets, outlength):
-        if self._mask.length is not unknown_length and self._mask.length == 0:
+        if self._mask.length == 0:
             return self
         return self.to_IndexedOptionArray64()._unique(
             negaxis, starts, offsets, outlength

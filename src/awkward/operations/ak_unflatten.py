@@ -10,7 +10,6 @@ from awkward._namedaxis import (
     _named_axis_to_positional_axis,
 )
 from awkward._nplikes.numpy_like import NumpyMetadata
-from awkward._nplikes.shape import unknown_length
 from awkward._regularize import is_integer_like, regularize_axis
 
 __all__ = ("unflatten",)
@@ -161,7 +160,7 @@ def _impl(array, counts, axis, highlevel, behavior, attrs):
         nplike = layout.backend.nplike
 
         if isinstance(counts, int):
-            if layout.length is not unknown_length and not 0 <= counts <= layout.length:
+            if not 0 <= counts <= layout.length:
                 raise ValueError("too large counts for array or negative counts")
             out = ak.contents.RegularArray(layout, counts)
 
@@ -174,7 +173,7 @@ def _impl(array, counts, axis, highlevel, behavior, attrs):
                 )[0]
                 - 1
             )
-            if layout.length is not unknown_length and (
+            if (
                 position >= current_offsets.size
                 or current_offsets[position] != layout.length
             ):

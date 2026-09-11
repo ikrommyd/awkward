@@ -13,7 +13,6 @@ from awkward._meta.bitmaskedmeta import BitMaskedMeta
 from awkward._nplikes.array_like import ArrayLike
 from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import IndexType, NumpyMetadata
-from awkward._nplikes.placeholder import PlaceholderArray
 from awkward._nplikes.shape import ShapeItem, unknown_length
 from awkward._nplikes.virtual import VirtualNDArray
 from awkward._regularize import is_integer, is_integer_like
@@ -471,11 +470,6 @@ class BitMaskedArray(BitMaskedMeta[Content], Content):
     def _getitem_nothing(self):
         return self._content._getitem_range(0, 0)
 
-    def _is_getitem_at_placeholder(self) -> bool:
-        if isinstance(self._mask.data, PlaceholderArray):
-            return True
-        return self._content._is_getitem_at_placeholder()
-
     def _is_getitem_at_virtual(self) -> bool:
         is_virtual = (
             isinstance(self._mask.data, VirtualNDArray)
@@ -622,14 +616,14 @@ class BitMaskedArray(BitMaskedMeta[Content], Content):
         return self.to_ByteMaskedArray()._numbers_to_type(name, including_unknown)
 
     def _is_unique(self, negaxis, starts, offsets, outlength):
-        if self._mask.length is not unknown_length and self._mask.length == 0:
+        if self._mask.length == 0:
             return True
         return self.to_IndexedOptionArray64()._is_unique(
             negaxis, starts, offsets, outlength
         )
 
     def _unique(self, negaxis, starts, offsets, outlength):
-        if self._mask.length is not unknown_length and self._mask.length == 0:
+        if self._mask.length == 0:
             return self
         out = self.to_IndexedOptionArray64()._unique(
             negaxis, starts, offsets, outlength
@@ -796,15 +790,8 @@ class BitMaskedArray(BitMaskedMeta[Content], Content):
             )
 
         else:
-            if self.length is not unknown_length:
-                excess_length = math.ceil(self.length / 8.0)
-            else:
-                excess_length = unknown_length
-            if (
-                self._mask.length is not unknown_length
-                and excess_length is not unknown_length
-                and self._mask.length == excess_length
-            ):
+            excess_length = math.ceil(self.length / 8.0)
+            if self._mask.length == excess_length:
                 mask = self._mask
             else:
                 mask = self._mask[:excess_length]

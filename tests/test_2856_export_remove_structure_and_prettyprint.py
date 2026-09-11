@@ -8,7 +8,6 @@ def test_prettyprint_rename():
     assert new_prettyprint.Formatter is deprecated_prettyprint.Formatter
     assert new_prettyprint.FormatterOptions is deprecated_prettyprint.FormatterOptions
     assert new_prettyprint.FormatterType is deprecated_prettyprint.FormatterType
-    assert new_prettyprint.PlaceholderValue is deprecated_prettyprint.PlaceholderValue
     assert new_prettyprint.alternate is deprecated_prettyprint.alternate
     assert new_prettyprint.custom_str is deprecated_prettyprint.custom_str
     assert new_prettyprint.get_at is deprecated_prettyprint.get_at

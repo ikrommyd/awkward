@@ -10,7 +10,6 @@ from awkward._namedaxis import (
     _remove_named_axis,
 )
 from awkward._nplikes.numpy_like import NumpyMetadata
-from awkward._nplikes.shape import unknown_length
 from awkward._regularize import regularize_axis
 from awkward.errors import AxisError
 
@@ -93,7 +92,7 @@ def _impl(array, axis, highlevel, behavior, attrs):
         # and length > 0 cases.
         backend = ak.backend(array)
         slicer = ak.to_backend(ak.from_iter([None, 0]), backend)
-        if layout.length is not unknown_length and layout.length == 0:
+        if layout.length == 0:
             out = layout[slicer[[0]]][0]
         else:
             out = layout[slicer[[1]]][0]

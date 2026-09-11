@@ -12,7 +12,6 @@ from awkward._meta.listoffsetmeta import ListOffsetMeta
 from awkward._nplikes.array_like import ArrayLike, maybe_materialize
 from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import IndexType, NumpyMetadata
-from awkward._nplikes.placeholder import PlaceholderArray
 from awkward._nplikes.shape import ShapeItem, unknown_length
 from awkward._nplikes.virtual import VirtualNDArray
 from awkward._parameters import (
@@ -292,12 +291,6 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
     def _getitem_nothing(self):
         return self._content._getitem_range(0, 0)
 
-    def _is_getitem_at_placeholder(self) -> bool:
-        return (
-            isinstance(self._offsets.data, PlaceholderArray)
-            or self._content._is_getitem_at_placeholder()
-        )
-
     def _is_getitem_at_virtual(self) -> bool:
         is_virtual = (
             isinstance(self._offsets.data, VirtualNDArray)
@@ -311,7 +304,7 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
             length_index = self._backend.nplike.shape_item_as_index(self.length)
             where += length_index
         # Validate `where`
-        if not (self.length is unknown_length or (0 <= where < self.length)):
+        if not (0 <= where < self.length):
             raise ak._errors.index_error(self, where)
         start, stop = self._offsets[where], self._offsets[where + 1]
         return self._content._getitem_range(start, stop)
@@ -324,7 +317,7 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
             return self
 
         offsets = self._offsets[start : stop + 1]
-        if offsets.length is not unknown_length and offsets.length == 0:
+        if offsets.length == 0:
             offsets = Index(
                 self._backend.nplike.zeros(1, dtype=self._offsets.dtype),
                 nplike=self._backend.nplike,
@@ -375,7 +368,7 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
 
         nplike = self._backend.nplike
         assert offsets.nplike is nplike
-        if offsets.length is not unknown_length and offsets.length == 0:
+        if offsets.length == 0:
             raise AssertionError(
                 "broadcast_tooffsets64 can only be used with non-empty offsets"
             )
@@ -383,11 +376,7 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
             raise AssertionError(
                 f"broadcast_tooffsets64 can only be used with offsets that start at 0, not {offsets[0]}"
             )
-        elif (
-            offsets.length is not unknown_length
-            and self._offsets.length is not unknown_length
-            and offsets.length != self._offsets.length
-        ):
+        elif offsets.length != self._offsets.length:
             raise AssertionError(
                 f"cannot broadcast RegularArray of length {self.length} to length {offsets.length - 1}"
             )
@@ -527,7 +516,7 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
                 dtype=np.int64,
             )
 
-            if inneroffsets.length is not unknown_length and inneroffsets.length == 0:
+            if inneroffsets.length == 0:
                 return (
                     offsets,
                     ListOffsetArray(
@@ -535,9 +524,7 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
                     ),
                 )
 
-            elif (
-                self._offsets.length is not unknown_length and self._offsets.length == 1
-            ):
+            elif self._offsets.length == 1:
                 tooffsets = Index64([inneroffsets[0]])
                 return (
                     offsets,
@@ -666,7 +653,7 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
         )
 
     def _is_unique(self, negaxis, starts, offsets, outlength):
-        if self._offsets.length is not unknown_length and self._offsets.length - 1 == 0:
+        if self._offsets.length - 1 == 0:
             return True
 
         branch, depth = self.branch_depth
@@ -701,7 +688,7 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
             return self._content._is_unique(negaxis, starts, self._offsets, outlength)
 
     def _unique(self, negaxis, starts, offsets, outlength):
-        if self._offsets.length is not unknown_length and self._offsets.length - 1 == 0:
+        if self._offsets.length - 1 == 0:
             return self
 
         branch, depth = self.branch_depth
@@ -1391,8 +1378,7 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
         nplike = self._backend.nplike
         nextlen = nplike.index_as_shape_item(self._offsets[-1] - self._offsets[0])
         # Clamp nextlen to actual content length to avoid out-of-bounds access
-        if self.content.length is not unknown_length:
-            nextlen = min(nextlen, self.content.length)
+        nextlen = min(nextlen, self.content.length)
         lenstarts = self._offsets.length - 1
 
         _maxcount = Index64.empty(1, nplike)
@@ -1768,7 +1754,7 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
             return buffer.view(np.dtype(("U", max_code_points)))
         elif array_param == "bytestring":
             # Handle length=0 case
-            if self.starts.length is not unknown_length and self.starts.length == 0:
+            if self.starts.length == 0:
                 max_count = 0
             else:
                 max_count = backend.nplike.index_as_shape_item(

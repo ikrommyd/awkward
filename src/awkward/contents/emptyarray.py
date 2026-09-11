@@ -163,9 +163,6 @@ class EmptyArray(EmptyMeta, Content):
     def _getitem_nothing(self):
         return self
 
-    def _is_getitem_at_placeholder(self) -> bool:
-        return False
-
     def _is_getitem_at_virtual(self) -> bool:
         return False
 

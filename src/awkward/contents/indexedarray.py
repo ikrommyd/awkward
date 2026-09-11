@@ -12,8 +12,7 @@ from awkward._meta.indexedmeta import IndexedMeta
 from awkward._nplikes.array_like import ArrayLike, maybe_materialize
 from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import IndexType, NumpyMetadata
-from awkward._nplikes.placeholder import PlaceholderArray
-from awkward._nplikes.shape import ShapeItem, unknown_length
+from awkward._nplikes.shape import ShapeItem
 from awkward._nplikes.virtual import VirtualNDArray
 from awkward._parameters import (
     parameters_intersect,
@@ -270,11 +269,6 @@ class IndexedArray(IndexedMeta[Content], Content):
 
     def _getitem_nothing(self):
         return self._content._getitem_range(0, 0)
-
-    def _is_getitem_at_placeholder(self) -> bool:
-        if isinstance(self._index.data, PlaceholderArray):
-            return True
-        return self._content._is_getitem_at_placeholder()
 
     def _is_getitem_at_virtual(self) -> bool:
         is_virtual = (
@@ -727,7 +721,7 @@ class IndexedArray(IndexedMeta[Content], Content):
         )
 
     def _is_unique(self, negaxis, starts, offsets, outlength):
-        if self._index.length is not unknown_length and self._index.length == 0:
+        if self._index.length == 0:
             return True
 
         nextindex = self._unique_index()
@@ -739,7 +733,7 @@ class IndexedArray(IndexedMeta[Content], Content):
         return next._is_unique(negaxis, starts, offsets, outlength)
 
     def _unique(self, negaxis, starts, offsets, outlength):
-        if self._index.length is not unknown_length and self._index.length == 0:
+        if self._index.length == 0:
             return self
         # IndexedArray (non-Option) has no -1 entries, so we don't need the
         # parents-filtering machinery the IndexedOptionArray version uses;
@@ -841,7 +835,7 @@ class IndexedArray(IndexedMeta[Content], Content):
         # Handle empty content FIRST, before categorical path
         # This prevents creating DictionaryArray with empty dictionary which causes
         # "Index 0 out of bounds" error and memory corruption during GC
-        if self._content.length is not unknown_length and self._content.length == 0:
+        if self._content.length == 0:
             # IndexedOptionArray._to_arrow replaces -1 in the index with 0. So behind
             # every masked value is self._content[0], unless self._content.length == 0.
             # In that case, don't call self._content[index]; it's empty anyway.

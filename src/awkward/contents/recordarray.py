@@ -73,20 +73,7 @@ def _calculate_recordarray_length(
             )
 
         # Take length as minimum length of contents
-        for content in contents:
-            # First time we're setting length, and content.length is not unknown_length
-            if length is None:
-                length = content.length
-                # Any unknown_length means all unknown_length
-                if length is unknown_length:
-                    break
-            # `length` is set, can't be unknown_length
-            elif content.length is unknown_length:
-                length = unknown_length
-                break
-            # `length` is set, can't be unknown_length
-            else:
-                length = min(length, content.length)
+        length = min(content.length for content in contents)
 
     # Otherwise
     elif length is not unknown_length:
@@ -407,11 +394,7 @@ class RecordArray(RecordMeta[Content], Content):
 
     def content(self, index_or_field: str | SupportsIndex) -> Content:
         out = super().content(index_or_field)
-        if (
-            self.length is unknown_length
-            or out.length is unknown_length
-            or out.length == self.length
-        ):
+        if out.length == self.length:
             return out
         else:
             return out[: self.length]
@@ -430,9 +413,6 @@ class RecordArray(RecordMeta[Content], Content):
     def _getitem_nothing(self) -> Content:
         return self._getitem_range(0, 0)
 
-    def _is_getitem_at_placeholder(self) -> bool:
-        return False
-
     def _is_getitem_at_virtual(self) -> bool:
         return False
 
@@ -440,7 +420,7 @@ class RecordArray(RecordMeta[Content], Content):
         if where < 0:
             where += self.length
 
-        if not (self.length is unknown_length or (0 <= where < self.length)):
+        if not (0 <= where < self.length):
             raise ak._errors.index_error(self, where)
         return Record(self, where)
 
@@ -780,15 +760,12 @@ class RecordArray(RecordMeta[Content], Content):
 
             nextcontents.append(merged)
 
-            if minlength is ak._util.UNSET or (
-                not (merged.length is unknown_length or minlength is unknown_length)
-                and merged.length < minlength
-            ):
+            if minlength is ak._util.UNSET or merged.length < minlength:
                 minlength = merged.length
 
         # `not for_each_field`: is a corner-case when all
         # the arrays are empty and have no fields either.
-        if minlength is unknown_length or not for_each_field:
+        if not for_each_field:
             from operator import attrgetter
 
             minlength = self.length

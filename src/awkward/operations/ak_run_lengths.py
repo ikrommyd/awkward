@@ -5,7 +5,6 @@ import awkward as ak
 from awkward._dispatch import high_level_function
 from awkward._layout import HighLevelContext
 from awkward._nplikes.numpy_like import NumpyMetadata
-from awkward._nplikes.shape import unknown_length
 
 __all__ = ("run_lengths",)
 
@@ -111,7 +110,7 @@ def _impl(array, highlevel, behavior, attrs):
         else:
             size = ak.to_layout(data).length
 
-        if size is not unknown_length and size == 0:
+        if size == 0:
             return backend.nplike.empty(0, dtype=np.int64), offsets
         else:
             diffs = backend.nplike.asarray(data[1:] != data[:-1])

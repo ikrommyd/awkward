@@ -29,7 +29,7 @@ from awkward._nplikes.array_like import MaterializableArray
 from awkward._nplikes.dispatch import nplike_of_obj
 from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import IndexType, NumpyMetadata
-from awkward._nplikes.shape import ShapeItem, unknown_length
+from awkward._nplikes.shape import ShapeItem
 from awkward._nplikes.virtual import VirtualNDArray
 from awkward._parameters import (
     parameters_are_equal,
@@ -367,7 +367,7 @@ class Content(Meta):
         length: int,
     ) -> RegularArray:
         # if this is in a tuple-slice and really should be 0, it will be trimmed later
-        length = 1 if length is not unknown_length and length == 0 else length
+        length = 1 if length == 0 else length
         index = head.index
         indexlength = index.length
         index = index.to_nplike(self._backend.nplike)
@@ -637,7 +637,7 @@ class Content(Meta):
 
             out = next._getitem_next(nextwhere[0], nextwhere[1:], None)
 
-            if out.length is not unknown_length and out.length == 0:
+            if out.length == 0:
                 return out._getitem_nothing()
             else:
                 return out._getitem_at(0)
@@ -696,7 +696,7 @@ class Content(Meta):
             out = ak._slicing.getitem_next_array_wrap(
                 self._carry(carry, allow_lazy), where.shape
             )
-            if out.length is not unknown_length and out.length == 0:
+            if out.length == 0:
                 return out._getitem_nothing()
             else:
                 return out._getitem_at(0)
@@ -778,9 +778,6 @@ class Content(Meta):
                 "iterable of str) are valid indices for slicing, not\n\n    "
                 + repr(where).replace("\n", "\n    ")
             )
-
-    def _is_getitem_at_placeholder(self) -> bool:
-        raise NotImplementedError
 
     def _is_getitem_at_virtual(self) -> bool:
         raise NotImplementedError
@@ -918,8 +915,8 @@ class Content(Meta):
         if replacement:
             size = size + (n - 1)
         thisn = n
-        if thisn is None or size is unknown_length:
-            combinationslen = size  # not actually size, just an unknown value
+        if thisn is None:
+            combinationslen = size
         else:
             if thisn > size:
                 combinationslen = 0
@@ -1036,7 +1033,7 @@ class Content(Meta):
         raise NotImplementedError
 
     def _pad_none_axis0(self, target: int, clip: bool) -> Content:
-        if not clip and (self.length is unknown_length or (target < self.length)):
+        if not clip and (target < self.length):
             index = Index64(
                 self._backend.nplike.arange(self.length, dtype=np.int64),
                 nplike=self._backend.nplike,
@@ -1355,11 +1352,7 @@ class Content(Meta):
         )
         return (
             self.__class__ is other.__class__
-            and (
-                self.length is unknown_length
-                or other.length is unknown_length
-                or self.length == other.length
-            )
+            and (self.length == other.length)
             and compare_parameters(self._parameters, other._parameters)
         )
 

@@ -334,9 +334,6 @@ class RegularArray(RegularMeta[Content], Content):
     def _getitem_nothing(self):
         return self._content._getitem_range(0, 0)
 
-    def _is_getitem_at_placeholder(self) -> bool:
-        return False
-
     def _is_getitem_at_virtual(self) -> bool:
         return False
 
@@ -448,7 +445,7 @@ class RegularArray(RegularMeta[Content], Content):
 
         nplike = self._backend.nplike
         assert offsets.nplike is nplike
-        if offsets.length is not unknown_length and offsets.length == 0:
+        if offsets.length == 0:
             raise AssertionError(
                 "broadcast_tooffsets64 can only be used with non-empty offsets"
             )
@@ -456,11 +453,7 @@ class RegularArray(RegularMeta[Content], Content):
             raise AssertionError(
                 f"broadcast_tooffsets64 can only be used with offsets that start at 0, not {offsets[0]}"
             )
-        elif (
-            offsets.length is not unknown_length
-            and self.length is not unknown_length
-            and offsets.length - 1 != self.length
-        ):
+        elif offsets.length - 1 != self.length:
             raise AssertionError(
                 f"cannot broadcast RegularArray of length {self.length} to length {offsets.length - 1}"
             )
@@ -554,9 +547,7 @@ class RegularArray(RegularMeta[Content], Content):
 
             nextcontent = self._content._carry(nextcarry, True)
 
-            if advanced is None or (
-                advanced.length is not unknown_length and advanced.length == 0
-            ):
+            if advanced is None or advanced.length == 0:
                 return RegularArray(
                     nextcontent._getitem_next(nexthead, nexttail, advanced),
                     nextsize,
@@ -619,9 +610,7 @@ class RegularArray(RegularMeta[Content], Content):
             )
 
             nexthead, nexttail = ak._slicing.head_tail(tail)
-            if advanced is None or (
-                advanced.length is not unknown_length and advanced.length == 0
-            ):
+            if advanced is None or advanced.length == 0:
                 nextcarry = ak.index.Index64.empty(
                     self.length * flathead.shape[0],
                     nplike,

@@ -19,7 +19,6 @@ from awkward._namedaxis import (
 )
 from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import NumpyMetadata
-from awkward._nplikes.shape import ShapeItem, unknown_length
 from awkward._parameters import (
     parameters_are_empty,
     parameters_are_equal,
@@ -64,25 +63,17 @@ class BroadcastOptions(TypedDict):
     broadcast_parameters_rule: BroadcastParameterRule
 
 
-def length_of_broadcast(inputs: Sequence) -> int | type[unknown_length]:
+def length_of_broadcast(inputs: Sequence) -> int:
     max_length: int | None = None
-    has_seen_unknown_length: bool = False
     for x in inputs:
         if not isinstance(x, Content):
             continue
-        if x.length is unknown_length:
-            has_seen_unknown_length = True
-        elif max_length is None:
+        if max_length is None:
             max_length = x.length
         else:
             max_length = max(max_length, x.length)
 
-    if has_seen_unknown_length:
-        if max_length is None:
-            return unknown_length
-        else:
-            return max_length
-    elif max_length is None:
+    if max_length is None:
         return 1
     else:
         return max_length
@@ -116,12 +107,12 @@ def broadcast_pack(inputs: Sequence, isscalar: list[bool]) -> list:
 
 def broadcast_unpack(x, isscalar: list[bool]):
     if all(isscalar):
-        if x.length is not unknown_length and x.length == 0:
+        if x.length == 0:
             return x._getitem_nothing()._getitem_nothing()
         else:
             return x[0][0]
     else:
-        if x.length is not unknown_length and x.length == 0:
+        if x.length == 0:
             return x._getitem_nothing()
         else:
             return x[0]
@@ -134,17 +125,14 @@ def in_function(options):
         return " in " + options["function_name"]
 
 
-def ensure_common_length(inputs, options: BroadcastOptions) -> ShapeItem:
+def ensure_common_length(inputs, options: BroadcastOptions) -> int | None:
     it = iter(inputs)
-    length: ShapeItem = unknown_length
+    length: int | None = None
     for content in it:
-        if content.length is not unknown_length:
-            length = content.length
-            break
+        length = content.length
+        break
 
     for other_content in it:
-        if other_content.length is unknown_length:
-            continue
         if other_content.length != length:
             raise ValueError(
                 f"cannot broadcast {type(content).__name__} of length {length} with {type(other_content).__name__} of length {other_content.length}{in_function(options)}"
@@ -971,17 +959,15 @@ def apply_step(
             else:
                 nextparameters.append(NO_PARAMETERS)
 
-        union_tags, union_num_contents, length = [], [], unknown_length
+        union_tags, union_num_contents, length = [], [], None
         for x in contents:
             if x.is_union:
                 tags = x.tags.raw(backend.nplike)
                 union_tags.append(tags)
                 union_num_contents.append(len(x.contents))
 
-                if length is unknown_length:
+                if length is None:
                     length = tags.shape[0]
-                elif tags.shape[0] is unknown_length:
-                    continue
                 elif length != tags.shape[0]:
                     raise ValueError(
                         f"cannot broadcast UnionArray of length {length} "

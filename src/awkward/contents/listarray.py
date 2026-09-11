@@ -11,7 +11,6 @@ from awkward._layout import maybe_posaxis
 from awkward._meta.listmeta import ListMeta
 from awkward._nplikes.array_like import ArrayLike
 from awkward._nplikes.numpy_like import IndexType, NumpyMetadata
-from awkward._nplikes.placeholder import PlaceholderArray
 from awkward._nplikes.shape import ShapeItem, unknown_length
 from awkward._nplikes.virtual import VirtualNDArray
 from awkward._parameters import (
@@ -273,7 +272,7 @@ class ListArray(ListMeta[Content], Content):
         lenoffsets = self._starts.length + 1
         if nplike.array_equal(starts[1:], stops[:-1]):
             offsets = nplike.empty(lenoffsets, dtype=starts.dtype)
-            if lenoffsets is not unknown_length and lenoffsets == 1:
+            if lenoffsets == 1:
                 offsets[0] = 0
             else:
                 offsets[:-1] = starts
@@ -294,11 +293,6 @@ class ListArray(ListMeta[Content], Content):
 
     def _getitem_nothing(self):
         return self._content._getitem_range(0, 0)
-
-    def _is_getitem_at_placeholder(self) -> bool:
-        return isinstance(self._starts.data, PlaceholderArray) or isinstance(
-            self._stops.data, PlaceholderArray
-        )
 
     def _is_getitem_at_virtual(self) -> bool:
         is_virtual_starts = (
@@ -398,7 +392,7 @@ class ListArray(ListMeta[Content], Content):
 
         nplike = self._backend.nplike
         assert offsets.nplike is nplike
-        if offsets.length is not unknown_length and offsets.length == 0:
+        if offsets.length == 0:
             raise AssertionError(
                 "broadcast_tooffsets64 can only be used with non-empty offsets"
             )
@@ -406,11 +400,7 @@ class ListArray(ListMeta[Content], Content):
             raise AssertionError(
                 f"broadcast_tooffsets64 can only be used with offsets that start at 0, not {offsets[0]}"
             )
-        elif (
-            offsets.length is not unknown_length
-            and self._starts.length is not unknown_length
-            and offsets.length - 1 != self._starts.length
-        ):
+        elif offsets.length - 1 != self._starts.length:
             raise AssertionError(
                 f"cannot broadcast RegularArray of length {self._starts.length} to length {offsets.length - 1}"
             )
@@ -811,9 +801,7 @@ class ListArray(ListMeta[Content], Content):
 
             nextcontent = self._content._carry(nextcarry, True)
 
-            if advanced is None or (
-                advanced.length is not unknown_length and advanced.length == 0
-            ):
+            if advanced is None or advanced.length == 0:
                 return ak.contents.ListOffsetArray(
                     nextoffsets,
                     nextcontent._getitem_next(nexthead, nexttail, advanced),
@@ -884,9 +872,7 @@ class ListArray(ListMeta[Content], Content):
                 self._backend.nplike.asarray(head.data), (-1,)
             )
             regular_flathead = ak.index.Index64(flathead, nplike=self._backend.nplike)
-            if advanced is None or (
-                advanced.length is not unknown_length and advanced.length == 0
-            ):
+            if advanced is None or advanced.length == 0:
                 nextcarry = ak.index.Index64.empty(
                     lenstarts * flathead.shape[0],
                     self._backend.nplike,
@@ -1265,7 +1251,7 @@ class ListArray(ListMeta[Content], Content):
         )
 
     def _is_unique(self, negaxis, starts, offsets, outlength):
-        if self._starts.length is not unknown_length and self._starts.length == 0:
+        if self._starts.length == 0:
             return True
 
         return self.to_ListOffsetArray64(True)._is_unique(
@@ -1273,7 +1259,7 @@ class ListArray(ListMeta[Content], Content):
         )
 
     def _unique(self, negaxis, starts, offsets, outlength):
-        if self._starts.length is not unknown_length and self._starts.length == 0:
+        if self._starts.length == 0:
             return self
 
         return self.to_ListOffsetArray64(True)._unique(
