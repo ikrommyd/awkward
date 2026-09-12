@@ -278,6 +278,8 @@ class Array(NDArrayOperatorsMixin, Iterable, Sized):
     numeric leaves of the data structure, maintaining structure in the output.
     """
 
+    _numbaview = None
+
     def __init__(
         self,
         data,
@@ -1860,6 +1862,8 @@ class Record(NDArrayOperatorsMixin):
 
     See also #ak.Array and #ak.behavior.
     """
+
+    _numbaview = None
 
     def __init__(
         self,
