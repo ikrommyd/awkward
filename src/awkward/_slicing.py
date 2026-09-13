@@ -495,32 +495,33 @@ def _normalise_item_bool_to_int(item: Content, backend: Backend) -> Content:
     ):
         if item_backend.nplike.known_data:
             item = item.to_ListOffsetArray64(True)
-            localindex = ak._do.local_index(item, axis=1)
-
-            flat_index = ak._do.flatten(localindex, axis=1)
+            nplike = item_backend.nplike
             flat_mask = ak._do.flatten(item, axis=1)
+            assert flat_mask.is_numpy
 
-            assert flat_index.is_numpy and flat_mask.is_numpy
-            nextcontent = flat_index.data[flat_mask.data]
-
-            cumsum = item_backend.nplike.empty(
-                flat_mask.data.shape[0] + 1, dtype=np.int64
+            # bool and int8 have the same width, so this is a view, not a copy
+            mask_data = nplike.ascontiguousarray(flat_mask.data).view(np.int8)
+            offsets = item.offsets
+            nextoffsets = ak.index.Index64.empty(offsets.length, nplike)
+            carrylength = nplike.index_as_shape_item(nplike.count_nonzero(mask_data))
+            nextcarry = ak.index.Index64.empty(carrylength, nplike)
+            item_backend.maybe_kernel_error(
+                item_backend[
+                    "awkward_ListOffsetArray_getitem_boolmask",
+                    nextoffsets.dtype.type,
+                    nextcarry.dtype.type,
+                    mask_data.dtype.type,
+                    offsets.dtype.type,
+                ](
+                    nextoffsets.data,
+                    nextcarry.data,
+                    mask_data,
+                    offsets.data,
+                    item.length,
+                    carrylength,
+                )
             )
-            if isinstance(item_backend.nplike, Jax):
-                cumsum = cumsum.at[0].set(0)
-                cumsum = cumsum.at[1:].set(
-                    item_backend.nplike.asarray(
-                        item_backend.nplike.cumsum(flat_mask.data)
-                    )
-                )
-            else:
-                cumsum[0] = 0
-                cumsum[1:] = item_backend.nplike.asarray(
-                    item_backend.nplike.cumsum(flat_mask.data)
-                )
-
-            item_offsets = item_backend.nplike.asarray(item.offsets.data)
-            nextoffsets = ak.index.Index(cumsum[item_offsets])
+            nextcontent = nextcarry.data
 
         else:
             item._touch_data(recursive=False)
