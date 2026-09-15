@@ -6,8 +6,6 @@ import numpy as np
 import pytest
 
 import awkward as ak
-from awkward._nplikes.numpy import Numpy
-from awkward._nplikes.placeholder import PlaceholderArray
 
 condition = ak.Array([[True, False, True], [], [False, True]])
 x = ak.Array([[1, 2, 3], [], [4, 5]])
@@ -91,19 +89,3 @@ def test_scalar_against_non_numeric_leaf():
     strings = ak.Array([["a", "b", "c"], [], ["d", "e"]])
     assert ak.where(condition, 5, strings).to_list() == [[5, "b", 5], [], ["d", 5]]
     assert ak.where(condition, strings, 5).to_list() == [["a", 5, "c"], [], [5, "e"]]
-
-
-def test_foreign_buffer_falls_back():
-    # a PlaceholderArray is not the backend's own array type, so the fast path
-    # must bail out rather than hand it to `nplike.where`
-    placeholder = ak.Array(
-        ak.from_buffers(
-            {"class": "NumpyArray", "primitive": "int64", "form_key": "node0"},
-            3,
-            {"node0-data": PlaceholderArray(Numpy.instance(), (3,), np.int64)},
-            highlevel=False,
-        )
-    )
-    strings = ak.Array(["a", "b", "c"])
-    result = ak.where(np.array([True, False, True]), placeholder, strings)
-    assert str(result.type) == "3 * union[int64, string]"

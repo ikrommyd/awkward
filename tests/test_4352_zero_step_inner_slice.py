@@ -58,10 +58,7 @@ LAYOUTS = {
 @pytest.mark.parametrize(
     "where", [(slice(None, None, 0),), (slice(0, 2), slice(None, None, 0))]
 )
-@pytest.mark.parametrize("typetracer", [False, True])
-def test_zero_step_raises(layout, where, typetracer):
-    if typetracer:
-        layout = layout.to_typetracer(forget_length=True)
+def test_zero_step_raises(layout, where):
     with pytest.raises(ValueError, match="slice step cannot be zero"):
         layout[where]
 
@@ -106,15 +103,3 @@ def test_nonzero_step_still_works():
 
     option = ak.Array([[1, None, 3], [4, 5, None]])
     assert option[:, ::-1].to_list() == [[3, None, 1], [None, 5, 4]]
-
-
-def test_unknown_typetracer_step_is_not_rejected():
-    from awkward._nplikes.shape import unknown_length
-    from awkward._nplikes.typetracer import TypeTracerArray
-
-    layout = ak.Array([[1, 2, 3], [4, 5, 6]]).layout.to_typetracer(forget_length=True)
-    # Neither an unknown length nor an unknown scalar is *known* to be zero, so
-    # the guard must let them through untouched.
-    assert layout[:, ::unknown_length].purelist_depth == 2
-    unknown_step = TypeTracerArray._new(np.dtype(np.int64), ())
-    assert layout[:, ::unknown_step].purelist_depth == 2

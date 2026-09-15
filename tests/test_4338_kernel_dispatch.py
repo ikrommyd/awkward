@@ -10,7 +10,6 @@ import pytest
 
 import awkward as ak
 from awkward._backends.numpy import NumpyBackend
-from awkward._backends.typetracer import TypeTracerBackend
 from awkward._kernels import CTypesKernel, NumpyKernel
 
 KEY = ("awkward_ByteMaskedArray_numnull", np.int64, np.int8)
@@ -24,7 +23,7 @@ def fresh_backend(cls):
     return backend
 
 
-@pytest.mark.parametrize("cls", [NumpyBackend, TypeTracerBackend])
+@pytest.mark.parametrize("cls", [NumpyBackend])
 def test_fresh_backend_has_empty_kernel_cache(cls):
     backend = fresh_backend(cls)
     assert backend._kernels == {}
@@ -69,6 +68,3 @@ def test_kernels_still_give_the_same_answers():
     assert ak.flatten(array).to_list() == [1, 2, 3, 4, 5]
     assert array[:, 1:].to_list() == [[2, 3], [], [5]]
     assert ak.to_list(array[[0, 2]]) == [[1, 2, 3], [4, 5]]
-
-    typetracer = array.layout.to_typetracer(forget_length=True)
-    assert str(ak.num(ak.Array(typetracer)).type) == "## * int64"

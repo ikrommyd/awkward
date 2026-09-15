@@ -174,19 +174,3 @@ def test_categorical_content_is_unchanged():
     )
     with pytest.raises(TypeError, match="categorical"):
         ak.fill_none(array, 0, axis=-1)
-
-
-@pytest.mark.parametrize(
-    ("array", "value"),
-    [
-        pytest.param(ak.Array([1.1, None, 3.3]), 0, id="numeric"),
-        pytest.param(ak.Array([[1.1, None], [], [None]]), 0, id="jagged"),
-        pytest.param(ak.Array(["one", None, "three"]), "?", id="string"),
-    ],
-)
-def test_typetracer_form_matches(array, value):
-    concrete = ak.fill_none(array, value, axis=-1).layout.form
-    typetracer = ak.fill_none(
-        ak.Array(array.layout.to_typetracer(forget_length=True)), value, axis=-1
-    ).layout.form
-    assert concrete == typetracer

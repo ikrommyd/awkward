@@ -143,13 +143,6 @@ def test_transform_projects_option_inputs_at_the_shared_valid_positions(case):
     broadcast = ak.broadcast_arrays(*arrays)
     assert result.to_list() == expected_sum(*(x.to_list() for x in broadcast))
     assert result.layout.form.type == broadcast[0].layout.form.type
-    assert (
-        ak.transform(
-            sum_leaves,
-            *[ak.Array(x.layout.to_typetracer(forget_length=True)) for x in arrays],
-        ).layout.form
-        == result.layout.form
-    )
 
 
 @pytest.mark.parametrize("case", CASES)

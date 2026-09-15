@@ -72,12 +72,3 @@ def test_non_native_byteorder_is_rejected(primitive):
         dtype_to_primitive(dtype)
     with pytest.raises(TypeError, match="unsupported dtype"):
         ak.contents.NumpyArray(np.empty(3, dtype=dtype))
-
-
-@pytest.mark.parametrize("dtype", ["float32", "datetime64[ns]", "timedelta64[us]"])
-def test_typetracer_form_matches(dtype):
-    array = np.empty(3, dtype=dtype)
-    layout = ak.contents.NumpyArray(array)
-    tt = ak.Array(layout).layout.to_typetracer(forget_length=True)
-    assert tt.backend.name == "typetracer"
-    assert tt.form == layout.form

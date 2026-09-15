@@ -843,8 +843,7 @@ class IndexedOptionArray(IndexedOptionMeta[Content], Content):
         nplike = self._backend.nplike
         content = self._content
         if not (
-            nplike.known_data
-            and content.is_numpy
+            content.is_numpy
             and value.is_numpy
             and value.backend is self._backend
             and content.length > 0

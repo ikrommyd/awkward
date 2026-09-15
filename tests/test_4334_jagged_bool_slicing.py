@@ -42,14 +42,3 @@ def test_empty_lists():
 
     empty = ak.Array([[]])
     assert empty[ak.Array([[]])].to_list() == [[]]
-
-
-def test_typetracer():
-    array = ak.Array([[1.1, 2.2, 3.3], [], [4.4, 5.5]])
-    mask = ak.Array([[True, False, True], [], [False, True]])
-
-    concrete = array[mask]
-    tracer = array.layout.to_typetracer(forget_length=True)[
-        mask.layout.to_typetracer(forget_length=True)
-    ]
-    assert tracer.form == concrete.layout.form

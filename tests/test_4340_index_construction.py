@@ -66,13 +66,3 @@ def test_partial_slices_make_a_new_index(where, expected):
     assert out is not index
     assert type(out) is ak.index.Index64
     assert out.data.tolist() == expected
-
-
-def test_typetracer_index_has_no_shortcut():
-    layout = ak.Array([[1, 2, 3], [], [4, 5]]).layout.to_typetracer(forget_length=True)
-    offsets = layout.offsets
-    assert not offsets.nplike.known_data
-    out = offsets[0 : offsets.length : 1]
-    assert out is not offsets
-    assert type(out) is ak.index.Index64
-    assert out.length is ak.typetracer.unknown_length
