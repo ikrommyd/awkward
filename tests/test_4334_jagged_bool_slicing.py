@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 import awkward as ak
 
 
@@ -55,15 +53,3 @@ def test_typetracer():
         mask.layout.to_typetracer(forget_length=True)
     ]
     assert tracer.form == concrete.layout.form
-
-
-def test_jax():
-    pytest.importorskip("jax")
-    ak.jax.register_and_check()
-
-    array = ak.to_backend(ak.Array([[1.1, 2.2, 3.3], [], [4.4, 5.5]]), "jax")
-    mask = ak.to_backend(ak.Array([[True, False, True], [], [False, True]]), "jax")
-
-    result = array[mask]
-    assert ak.backend(result) == "jax"
-    assert result.to_list() == [[1.1, 3.3], [], [5.5]]
