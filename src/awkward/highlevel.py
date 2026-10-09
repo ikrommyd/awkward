@@ -265,6 +265,8 @@ class Array(NDArrayOperatorsMixin, Iterable, Sized):
     See #ak.to_arrow and #ak.from_arrow.
     """
 
+    _numbaview = None
+
     def __init__(
         self,
         data,
@@ -276,7 +278,9 @@ class Array(NDArrayOperatorsMixin, Iterable, Sized):
         attrs=None,
         named_axis=None,
     ):
-        self._cpp_type = None
+        # these names are private, so bypass `__setattr__`'s per-name checks
+        state = self.__dict__
+        state["_cpp_type"] = None
         if isinstance(data, ak.contents.Content):
             layout = data
 
@@ -340,9 +344,9 @@ class Array(NDArrayOperatorsMixin, Iterable, Sized):
             # if NAMED_AXIS_KEY is already in attrs, it will be overwritten
             attrs[NAMED_AXIS_KEY] = _named_axis
 
-        self._layout = layout
-        self._behavior = behavior
-        self._attrs = None if attrs is None else Attrs(attrs)
+        state["_layout"] = layout
+        state["_behavior"] = behavior
+        state["_attrs"] = None if attrs is None else Attrs(attrs)
 
         docstr = layout.purelist_parameter("__doc__")
         if isinstance(docstr, str):
@@ -359,12 +363,13 @@ class Array(NDArrayOperatorsMixin, Iterable, Sized):
         return id(self)
 
     def _update_class(self, restore=None):
-        self._numbaview = None
+        state = self.__dict__
+        state["_numbaview"] = None
         # invalidate the cached cppyy type, generator, and lookup: they hold raw
         # pointers into the old buffers, which are stale after the layout changes
-        self._cpp_type = self._generator = self._lookup = None
+        state["_cpp_type"] = state["_generator"] = state["_lookup"] = None
         previous_class = self.__class__
-        self.__class__ = get_array_class(self._layout, self._behavior)
+        self.__class__ = get_array_class(state["_layout"], state["_behavior"])
         if hasattr(self, "__awkward_validation__"):
             try:
                 self.__awkward_validation__()
@@ -1330,7 +1335,7 @@ class Array(NDArrayOperatorsMixin, Iterable, Sized):
         to add or modify a field.
         """
         if name.startswith("_") or hasattr(type(self), name):
-            super().__setattr__(name, value)
+            object.__setattr__(self, name, value)
         elif name in self._layout.fields:
             raise AttributeError(
                 "fields cannot be set as attributes. use #__setitem__ or #ak.with_field"
@@ -1840,6 +1845,8 @@ class Record(NDArrayOperatorsMixin):
     See also #ak.Array and #ak.behavior.
     """
 
+    _numbaview = None
+
     def __init__(
         self,
         data,
@@ -1909,9 +1916,10 @@ class Record(NDArrayOperatorsMixin):
             # if NAMED_AXIS_KEY is already in attrs, it will be overwritten
             attrs[NAMED_AXIS_KEY] = _named_axis
 
-        self._layout = layout
-        self._behavior = behavior
-        self._attrs = None if attrs is None else Attrs(attrs)
+        state = self.__dict__
+        state["_layout"] = layout
+        state["_behavior"] = behavior
+        state["_attrs"] = None if attrs is None else Attrs(attrs)
 
         docstr = layout.purelist_parameter("__doc__")
         if isinstance(docstr, str):
@@ -1923,9 +1931,10 @@ class Record(NDArrayOperatorsMixin):
             ak.operations.validity_error(self, exception=True)
 
     def _update_class(self, restore=None):
-        self._numbaview = None
+        state = self.__dict__
+        state["_numbaview"] = None
         previous_class = self.__class__
-        self.__class__ = get_record_class(self._layout, self._behavior)
+        self.__class__ = get_record_class(state["_layout"], state["_behavior"])
         if hasattr(self, "__awkward_validation__"):
             try:
                 self.__awkward_validation__()
@@ -2295,7 +2304,7 @@ class Record(NDArrayOperatorsMixin):
         to add or modify a field.
         """
         if name.startswith("_") or hasattr(type(self), name):
-            super().__setattr__(name, value)
+            object.__setattr__(self, name, value)
         elif name in self._layout.fields:
             raise AttributeError(
                 "fields cannot be set as attributes. use #__setitem__ or #ak.with_field"
