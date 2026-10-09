@@ -929,7 +929,7 @@ class NumpyArray(NumpyMeta, Content):
                 )._data
                 counts = offsets.data[1:] - offsets.data[:-1]
                 parents = _numpy.repeat(
-                    _numpy.arange(outlength, dtype=np.int64), counts.astype(np.intp)
+                    _numpy.arange(outlength, dtype=np.int64), counts
                 )
                 covered = parents.shape[0]
                 values = sorted_[:covered]
