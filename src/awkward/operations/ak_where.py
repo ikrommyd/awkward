@@ -8,7 +8,6 @@ from awkward._dispatch import high_level_function
 from awkward._layout import HighLevelContext, ensure_same_backend
 from awkward._namedaxis import NAMED_AXIS_KEY, NamedAxesWithDims, _unify_named_axis
 from awkward._nplikes.numpy_like import NumpyMetadata
-from awkward._typing import Any, Mapping
 
 __all__ = ("where",)
 
@@ -17,14 +16,7 @@ np = NumpyMetadata.instance()
 
 @ak._connect.numpy.implements("where")
 @high_level_function()
-def where(
-    condition: Any,
-    *args: Any,
-    mergebool: bool = True,
-    highlevel: bool = True,
-    behavior: Mapping | None = None,
-    attrs: Mapping | None = None,
-) -> Any:
+def where(condition, *args, mergebool=True, highlevel=True, behavior=None, attrs=None):
     """Selects elements from `x` or `y` by a condition, or finds where it is True.
 
     This function has a one-argument form, `condition` without `x` or `y`, and
