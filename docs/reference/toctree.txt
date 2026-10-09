@@ -57,8 +57,9 @@
     generated/ak.to_dataframe
 
 .. toctree::
-    :caption: Converting to cuDF Series
+    :caption: Converting to and from cuDF
 
+    generated/ak.from_cudf
     generated/ak.to_cudf
 
 .. toctree::
