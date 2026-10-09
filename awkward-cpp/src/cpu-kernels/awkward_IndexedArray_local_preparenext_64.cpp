@@ -6,7 +6,7 @@
 
 ERROR awkward_IndexedArray_local_preparenext_64(
     int64_t* __restrict__ tocarry,
-    const int64_t* /* starts */,   // used in CUDA kernels
+    const int64_t* /* starts */,   // unused
     const int64_t* __restrict__ offsets,
     const int64_t* __restrict__ nextoffsets,
     int64_t outlength) {

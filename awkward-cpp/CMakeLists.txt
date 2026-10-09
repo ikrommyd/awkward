@@ -114,8 +114,7 @@ else()
 endif()
 set(CMAKE_BUILD_RPATH_USE_ORIGIN TRUE)
 
-# Three tiers: [cpu-kernels (extern "C" interface), cuda-kernels (extern "C" interface)],
-# libawkward (C++), and Python modules.
+# Three tiers: cpu-kernels (extern "C" interface), libawkward (C++), and Python modules.
 file(GLOB CPU_KERNEL_SOURCES CONFIGURE_DEPENDS "src/cpu-kernels/*.cpp")
 file(GLOB_RECURSE LIBAWKWARD_SOURCES CONFIGURE_DEPENDS "src/libawkward/*.cpp")
 
