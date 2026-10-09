@@ -157,42 +157,10 @@ def check_cpu_implementation(kerneldict):
             count += 1
 
 
-def check_cuda_implementation(kerneldict):
-    count = 0
-    for kernelname in kerneldict.keys():
-        if not (
-            os.path.isfile(
-                os.path.join(
-                    CURRENT_DIR,
-                    "..",
-                    "awkward-cpp",
-                    "src",
-                    "cuda-kernels",
-                    kernelname + ".cu",
-                )
-            )
-            or os.path.isfile(
-                os.path.join(
-                    CURRENT_DIR,
-                    "..",
-                    "awkward-cpp",
-                    "src",
-                    "cuda-kernels",
-                    "manual_" + kernelname + ".cu",
-                )
-            )
-        ):
-            if count == 0:
-                print("\nKernels not implemented as a CUDA kernel - ")
-            print(kernelname)
-            count += 1
-
-
 def check_implementations(kerneldict):
     print("Checking if kernels are implemented everywhere...")
     check_spec_implementation()
     check_cpu_implementation(kerneldict)
-    check_cuda_implementation(kerneldict)
 
 
 if __name__ == "__main__":
@@ -205,7 +173,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--check-implemented",
         action="store_true",
-        help="Check if kernel is present in specification file, as a CPU kernel and as a CUDA kernel",
+        help="Check if kernel is present in specification file and as a CPU kernel",
     )
     args = parser.parse_args()
     kernels = parse_spec()

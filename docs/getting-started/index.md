@@ -437,8 +437,6 @@ which is the `record` that has `np.asarray(record.y).sum() == 10`. (One-dimensio
 
 Awkward Arrays are immutable inside of JIT-compiled functions, just as they are outside. To create new Awkward Arrays with Numba, use {obj}`ak.ArrayBuilder`.
 
-Awkward Arrays with {func}`ak.backend` equal to `"cuda"` can be passed to Numba functions on GPUs, compiled with `@nb.cuda.jit`. See {doc}`../user-guide/how-to-use-in-numba-cuda` for more.
-
 The choice between computing outside of a Numba JIT-compiled function and outside of one is an either/or choice between imperative style in Numba (only iteration is allowed, no `ak.*` functions or fancy slices) and array-oriented style outside (iteration is slow in Python; `ak.*` functions are encouraged).
 
 ::::::

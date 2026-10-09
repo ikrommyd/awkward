@@ -14,9 +14,8 @@ def backend(*arrays):
     This name may be
 
     * `"cpu"` for arrays backed by NumPy;
-    * `"cuda"` for arrays backed by CuPy;
     * `"typetracer"` for arrays without any data;
-    * None if the objects are not Awkward, NumPy, CuPy, or typetracer
+    * None if the objects are not Awkward, NumPy, or typetracer
       arrays (e.g. Python numbers, booleans, strings).
 
     If there are multiple, compatible backends (e.g. NumPy & typetracer)

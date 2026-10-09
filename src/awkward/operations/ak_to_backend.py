@@ -19,22 +19,14 @@ def to_backend(array, backend, *, highlevel=True, behavior=None, attrs=None):
     rather than copied, so this operation can be an inexpensive way to ensure
     that an array is ready for a particular library.
 
-    To use `"cuda"`, the `cupy` package must be installed, either with::
-
-        pip install cupy
-
-    or::
-
-        conda install -c conda-forge cupy
-
     See #ak.kernels.
 
     Args:
         array: Array-like data (anything #ak.to_layout recognizes).
-        backend (`"cpu"`, `"cuda"`, or `"typetracer"`): If `"cpu"`, the array structure is
+        backend (`"cpu"` or `"typetracer"`): If `"cpu"`, the array structure is
             recursively copied (if need be) to main memory for use with
-            the default Numpy backend; if `"cuda"`, the structure is copied
-            to the GPU(s) for use with CuPy.
+            the default Numpy backend; if `"typetracer"`, the array is replaced
+            by a data-less typetracer with the same type.
         highlevel (bool): If True, return an #ak.Array; otherwise, return
             a low-level #ak.contents.Content subclass.
         behavior (None or dict): Custom #ak.behavior for the output array, if

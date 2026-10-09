@@ -10,7 +10,6 @@ from awkward._backends.backend import Backend
 from awkward._layout import maybe_posaxis
 from awkward._meta.listoffsetmeta import ListOffsetMeta
 from awkward._nplikes.array_like import ArrayLike, maybe_materialize
-from awkward._nplikes.cupy import Cupy
 from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import IndexType, NumpyMetadata
 from awkward._nplikes.placeholder import PlaceholderArray
@@ -1776,80 +1775,6 @@ class ListOffsetArray(ListOffsetMeta[Content], Content):
                     validbytes, options["count_nulls"]
                 ),
             )
-
-    def _to_cudf(self, cudf: Any, mask: Content | None, length: int):
-        cupy = Cupy.instance()
-        index = maybe_materialize(self._offsets.raw(cupy))[0].astype("int32")
-
-        import pylibcudf as plc
-        from cudf.core.buffer import as_buffer
-        from cudf.core.column.column import ColumnBase, as_column
-
-        offsets_col = as_column(index)
-        # Build the packed bitmask as a CuPy array (LSB order, 64-byte aligned)
-        if mask is not None:
-            m_arr = cupy._module.packbits(cupy.asarray(mask), bitorder="little")
-            if m_arr.nbytes % 64:
-                m_arr = cupy._module.resize(m_arr, ((m_arr.nbytes // 64) + 1) * 64)
-            null_count = int(len(self) - mask.sum())
-        else:
-            m_arr = None
-            null_count = 0
-
-        if self.parameters.get("__array__") == "string":
-            # String columns: chars in the data buffer, offsets as child[0].
-            # Wrap via pylibcudf so that cudf can own/validate the buffers.
-            from pylibcudf.gpumemoryview import gpumemoryview
-
-            chars_cp = cupy.asarray(self._content.data)
-            chars_gmv = gpumemoryview(chars_cp)
-            offsets_gmv = gpumemoryview(index)
-
-            n = length
-            offsets_plc = plc.Column(
-                data_type=plc.DataType(plc.TypeId.INT32),
-                size=n + 1,
-                data=offsets_gmv,
-                mask=None,
-                null_count=0,
-                offset=0,
-                children=[],
-            )
-
-            string_plc = plc.Column(
-                data_type=plc.DataType(plc.TypeId.STRING),
-                size=n,
-                data=chars_gmv,
-                mask=None,
-                null_count=0,
-                offset=0,
-                children=[offsets_plc],
-            )
-            string_col = ColumnBase.from_pylibcudf(string_plc)
-            if m_arr is not None:
-                # Attach the validity bitmap through cudf, exactly as the
-                # ByteMaskedArray/BitMaskedArray paths do. Handing the mask to
-                # the pylibcudf constructor instead yields a string column that
-                # cudf cannot convert back to Arrow (its character buffer comes
-                # out with size 0).
-                return string_col.set_mask(as_buffer(m_arr), null_count)
-            return string_col
-
-        cont = self._content._to_cudf(cudf, None, len(self._content))
-        plc_col = plc.Column(
-            data_type=plc.DataType(plc.TypeId.LIST),
-            size=length,
-            data=None,
-            mask=None,
-            null_count=0,
-            offset=0,
-            children=[offsets_col.to_pylibcudf(), cont.to_pylibcudf()],
-        )
-        list_dt = cudf.ListDtype(cont.dtype)
-        list_col = ColumnBase.create(plc_col, list_dt)
-        if m_arr is not None:
-            return list_col.set_mask(as_buffer(m_arr), null_count)
-        return list_col
 
     def _to_backend_array(self, allow_missing, backend):
         array_param = self.parameter("__array__")

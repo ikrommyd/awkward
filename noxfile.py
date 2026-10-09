@@ -133,7 +133,6 @@ def clean(session):
         remove_if_found(
             pathlib.Path("awkward-cpp", "include", "awkward", "kernels.h"),
             pathlib.Path("awkward-cpp", "src", "awkward_cpp", "_kernel_signatures.py"),
-            pathlib.Path("src", "awkward", "_connect", "cuda", "_kernel_signatures.py"),
         )
     if args.tests or clean_all:
         remove_if_found(
@@ -141,8 +140,6 @@ def clean(session):
             pathlib.Path("awkward-cpp", "tests-spec-explicit"),
             pathlib.Path("awkward-cpp", "tests-cpu-kernels"),
             pathlib.Path("awkward-cpp", "tests-cpu-kernels-explicit"),
-            pathlib.Path("tests-cuda-kernels"),
-            pathlib.Path("tests-cuda-kernels-explicit"),
         )
     if args.docs or clean_all:
         remove_if_found(pathlib.Path("docs", "reference", "generated", "kernels.rst"))

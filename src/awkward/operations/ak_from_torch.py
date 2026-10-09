@@ -11,8 +11,8 @@ __all__ = ("from_torch",)
 def from_torch(array):
     """Converts a PyTorch Tensor into an Awkward Array.
 
-    The data is not copied: a CPU tensor shares its buffer with the Awkward
-    Array, and a CUDA tensor's buffer is shared through DLPack.
+    A CPU tensor shares its buffer with the Awkward Array (the data are not
+    copied); a tensor on another device (e.g. a GPU) is copied to main memory.
 
     If `array` contains any other data types the function raises an error.
 
@@ -49,21 +49,6 @@ or
     if not isinstance(array, torch.Tensor):
         raise TypeError("""only PyTorch Tensor can be converted to Awkward Array""")
 
-    # keep the resulting array on the same device as input tensor
-    device = "cuda" if array.is_cuda else "cpu"
-
-    # convert tensors to cupy if they are on cuda
-    if device == "cuda":
-        from awkward._nplikes.cupy import Cupy
-
-        cp = Cupy.instance()
-
-        # zero-copy data exchange through DLPack
-        cp_array = cp.from_dlpack(array)
-        ak_array = ak.from_cupy(cp_array)
-
-    else:
-        np_array = array.numpy()
-        ak_array = ak.from_numpy(np_array)
-
-    return ak_array
+    # `Tensor.cpu` is a no-op for CPU tensors and copies tensors on other
+    # devices (e.g. GPUs) into main memory
+    return ak.from_numpy(array.cpu().numpy())

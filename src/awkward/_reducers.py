@@ -493,7 +493,7 @@ class SumOfSquares(KernelReducer):
     needs_position: Final = False
 
     def axis_none_reducer(self) -> AxisNoneSumOfSquares:
-        # For a full reduction on a concrete backend, route through NumPy/CuPy's
+        # For a full reduction on a concrete backend, route through NumPy's
         # optimized (SIMD/BLAS-class) reduction instead of the scalar per-element
         # kernel loop -- a large speedup for big arrays.
         return AxisNoneSumOfSquares()
@@ -535,7 +535,7 @@ class AxisNoneSumOfSquares(SumOfSquares):
     """``axis=None`` specialization of :class:`SumOfSquares`.
 
     Widens to ``float64`` and squares with the backend's ufunc, then reduces via
-    ``nplike.sum`` (NumPy/CuPy's optimized reduction) rather than the scalar
+    ``nplike.sum`` (NumPy's optimized reduction) rather than the scalar
     kernel loop. The whole computation stays on the backend's device; only the
     final scalar returns to the host, as for every ``axis=None`` reduction.
     """
@@ -575,7 +575,7 @@ class CenteredSumOfSquares(KernelReducer):
     descent, and hence the bin order, is reducer-independent), so bin ``b`` here
     corresponds to element ``b`` of the flattened mean. Fusing the centring into
     the reduction removes the materialised ``x - mean`` deviation buffer and the
-    mean's back-broadcast onto every element. Concrete (numpy/cupy) backends
+    mean's back-broadcast onto every element. Concrete (e.g. NumPy) backends
     only; backs ``ak.var``/``ak.std`` at the innermost axis.
     """
 

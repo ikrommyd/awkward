@@ -171,7 +171,6 @@ def _register():
     import numba
 
     import awkward._connect.numba.arrayview
-    import awkward._connect.numba.arrayview_cuda
     import awkward._connect.numba.builder
     import awkward._connect.numba.growablebuffer
     import awkward._connect.numba.layout
@@ -195,7 +194,6 @@ def _register():
     n.UnionArrayType = awkward._connect.numba.layout.UnionArrayType
     n.ArrayBuilderType = awkward._connect.numba.builder.ArrayBuilderType
     n.ArrayBuilderModel = awkward._connect.numba.builder.ArrayBuilderModel
-    n.cuda = awkward._connect.numba.arrayview_cuda.ArrayViewArgHandler()
     n.GrowableBufferType = awkward._connect.numba.growablebuffer.GrowableBufferType
     n._from_data = awkward._connect.numba.growablebuffer._from_data
 

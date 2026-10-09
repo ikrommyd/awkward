@@ -94,8 +94,6 @@ subtrees:
                         title: "Statistics (mean/var/std)"
                       - file: user-guide/how-to-math-argminmax
                         title: "Min/max/sort one array by another"
-                      - file: user-guide/how-to-math-gpu
-                        title: "Awkward Arrays on GPUs"
 
               - file: user-guide/how-to-strings
                 title: "Working with strings"
@@ -153,8 +151,6 @@ subtrees:
                         title: "Introduction"
                       - file: user-guide/how-to-use-in-numba-features
                         title: "Supported features"
-                      - file: user-guide/how-to-use-in-numba-cuda
-                        title: "Working with CUDA"
 
               - file: user-guide/how-to-use-in-cpp
                 title: "Using arrays in C++"

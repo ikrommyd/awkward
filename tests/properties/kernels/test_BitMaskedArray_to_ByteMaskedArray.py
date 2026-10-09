@@ -7,9 +7,8 @@ Hypothesis-generated inputs. The property is::
 
     backend_kernel(inputs) == reference_definition(inputs)   for all valid inputs
 
-The same property runs against every available backend: the compiled CPU kernel
-always, and the CUDA kernel when a GPU is present (selected in CI with
-``-m cuda``). The kernel's pure-Python reference implementation is taken
+The same property runs against every available backend (the compiled CPU
+kernel). The kernel's pure-Python reference implementation is taken
 straight from ``kernel-specification.yml`` (the single source of truth),
 so the test never depends on the generated ``awkward-cpp/tests-spec/kernels.py``.
 """
@@ -62,35 +61,9 @@ def _run_cpu(
     return [int(bool(x)) for x in tobytemask]
 
 
-def _run_cuda(
-    frombitmask: list[int], bitmasklength: int, validwhen: bool, lsb_order: bool
-) -> list[int]:
-    """Run the compiled CUDA kernel via the CuPy backend; return 0/1 ints."""
-    import cupy
-
-    import awkward._connect.cuda as ak_cu
-    from awkward._backends.cupy import CupyBackend
-
-    n_out = bitmasklength * 8
-    tobytemask = cupy.empty(n_out, dtype=cupy.int8)
-    c_frombitmask = cupy.array(frombitmask, dtype=cupy.uint8)
-    func_cuda = CupyBackend.instance()[KERNEL, cupy.int8, cupy.uint8]
-    func_cuda(tobytemask, c_frombitmask, bitmasklength, validwhen, lsb_order)
-    ak_cu.synchronize_cuda()  # kernel errors surface here
-    return [int(bool(x)) for x in cupy.asnumpy(tobytemask)]
-
-
 def _available_backends():
-    """CPU always; CUDA only when a GPU device is actually present."""
-    backends = [pytest.param(_run_cpu, id="cpu")]
-    try:
-        import cupy
-
-        if cupy.cuda.runtime.getDeviceCount() > 0:
-            backends.append(pytest.param(_run_cuda, id="cuda", marks=pytest.mark.cuda))
-    except Exception:
-        pass
-    return backends
+    """The backends whose compiled kernels are tested."""
+    return [pytest.param(_run_cpu, id="cpu")]
 
 
 @pytest.mark.parametrize("run", _available_backends())
