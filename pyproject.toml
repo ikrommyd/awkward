@@ -113,7 +113,6 @@ end-before = "<!-- readme-pypi-ignore-after -->"
 [tool.pytest.ini_options]
 minversion = "6.0"
 norecursedirs = [
-    ".hypothesis",
     "src",
     "pybind11",
     "rapidjson",
