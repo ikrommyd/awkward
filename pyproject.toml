@@ -137,7 +137,7 @@ filterwarnings = [
     "ignore:The NumPy module was reloaded:UserWarning",
     "ignore:.*np\\.MachAr.*:DeprecationWarning",
     "ignore:module 'sre_.*' is deprecated:DeprecationWarning",
-    'ignore:.* is experimental\.:UserWarning',
+    "ignore::awkward.errors.ExperimentalWarning",
 ]
 log_level = "INFO"
 testpaths = ["tests"]
