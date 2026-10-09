@@ -32,11 +32,11 @@ You can test any examples in a new window/tab by clicking on [![Try It! ⭷](htt
 
 Python's builtin lists, dicts, and classes can be used to analyze arbitrary data structures, but at a cost in speed and memory. Therefore, they can't be used (easily) with large datasets.
 
-[Pandas](https://pandas.pydata.org/) DataFrames (as well as [Polars](https://pola.rs/), [cuDF](https://docs.rapids.ai/api/cudf/stable/), and [Dask DataFrame](https://docs.dask.org/en/stable/dataframe.html)) are well-suited to tabular data, including tables with relational indexes, but not arbitrary data structures. If a DataFrame is filled with Python's builtin types, then it offers no speed or memory advantage over Python itself.
+[Pandas](https://pandas.pydata.org/) DataFrames (as well as [Polars](https://pola.rs/) and [Dask DataFrame](https://docs.dask.org/en/stable/dataframe.html)) are well-suited to tabular data, including tables with relational indexes, but not arbitrary data structures. If a DataFrame is filled with Python's builtin types, then it offers no speed or memory advantage over Python itself.
 
 [NumPy](https://numpy.org/) is ideal for rectangular arrays of numbers, but not arbitrary data structures. If a NumPy array is filled with Python's builtin types, then it offers no speed or memory advantage over Python itself.
 
-[Apache Arrow](https://arrow.apache.org/) ([pyarrow](https://arrow.apache.org/docs/python/)) manages arrays of arbitrary data structures (including those in [Polars](https://pola.rs/), [cuDF](https://docs.rapids.ai/api/cudf/stable/), and to some extent, [Pandas](https://pandas.pydata.org/)), with great language interoperability and interprocess communication, but without manipulation functions oriented toward data analysts.
+[Apache Arrow](https://arrow.apache.org/) ([pyarrow](https://arrow.apache.org/docs/python/)) manages arrays of arbitrary data structures (including those in [Polars](https://pola.rs/) and to some extent, [Pandas](https://pandas.pydata.org/)), with great language interoperability and interprocess communication, but without manipulation functions oriented toward data analysts.
 
 Awkward Array is a data analyst-friendly extension of NumPy-like idioms for arbitrary data structures. It is intended to be used interchangeably with NumPy and share data with Arrow and DataFrames. Like NumPy, it simplifies and accelerates computations that transform arrays into arrays—all computations over elements in an array are compiled. Also like NumPy, imperative-style computations can be accelerated with [Numba](https://numba.pydata.org/).
 
@@ -86,7 +86,7 @@ After importing Awkward Array with
 import awkward as ak
 ```
 
-the `ak.Array` constructor takes [NumPy arrays](https://numpy.org/), [CuPy arrays](https://cupy.dev/), [pyarrow arrays](https://arrow.apache.org/docs/python/), or an iterable of Python builtin lists and dicts, such as
+the `ak.Array` constructor takes [NumPy arrays](https://numpy.org/), [pyarrow arrays](https://arrow.apache.org/docs/python/), or an iterable of Python builtin lists and dicts, such as
 
 ```python
 example = ak.Array([
@@ -96,7 +96,7 @@ example = ak.Array([
 ])
 ```
 
-This is a shorthand for functions such as {func}`ak.from_numpy`, {func}`ak.from_cupy`, {func}`ak.from_arrow`, and {func}`ak.from_iter`, which you can call explicitly for more control. Similarly, functions like {func}`ak.to_numpy`, {func}`ak.to_cupy`, {func}`ak.to_arrow`, and {func}`ak.to_list` convert Awkward Arrays into other types of arrays, or Python lists.
+This is a shorthand for functions such as {func}`ak.from_numpy`, {func}`ak.from_arrow`, and {func}`ak.from_iter`, which you can call explicitly for more control. Similarly, functions like {func}`ak.to_numpy`, {func}`ak.to_arrow`, and {func}`ak.to_list` convert Awkward Arrays into other types of arrays, or Python lists.
 
 Several file formats have `ak.from_*` and `ak.to_*` functions, such as JSON, Parquet, and Feather. To read and write ROOT files, see [Uproot](https://uproot.readthedocs.io/).
 

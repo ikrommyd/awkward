@@ -344,7 +344,6 @@ intersphinx_mapping = {
     "scipy": ("https://docs.scipy.org/doc/scipy", None),
     "numba": ("https://numba.pydata.org/numba-doc/latest", None),
     "arrow": ("https://arrow.apache.org/docs/", None),
-    "jax": ("https://jax.readthedocs.io/en/latest", None),
 }
 
 
