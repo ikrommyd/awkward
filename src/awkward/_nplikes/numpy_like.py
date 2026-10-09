@@ -134,10 +134,6 @@ class NumpyLike(PublicSingleton, Protocol[ArrayLikeT]):
     @abstractmethod
     def known_data(self) -> bool: ...
 
-    @property
-    @abstractmethod
-    def is_eager(self) -> bool: ...
-
     ############################ ndarray property that all the nplikes have
 
     @property

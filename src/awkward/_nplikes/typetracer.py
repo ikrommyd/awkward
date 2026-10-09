@@ -605,7 +605,6 @@ def try_touch_shape(array: Any):
 @register_nplike
 class TypeTracer(NumpyLike[TypeTracerArray], metaclass=NominalMeta):
     known_data: Final = False
-    is_eager: Final = True
     supports_structured_dtypes: Final = True
     supports_virtual_arrays: Final = False
 
