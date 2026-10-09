@@ -347,11 +347,6 @@
     generated/ak.numba.register_and_check
 
 .. toctree::
-    :caption: Warnings
-
-    generated/ak.errors.ExperimentalWarning
-
-.. toctree::
     :caption: High-level data types
 
     generated/ak.types.Type
