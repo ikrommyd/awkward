@@ -765,6 +765,13 @@ class AxisNoneMin(Min):
             result_scalar = nplike.asarray(val, dtype=data.dtype)
         else:
             result_scalar = nplike.min(data, axis=None)
+            if data.dtype.kind in "fc" and nplike.isnan(result_scalar):
+                # the kernels skip NaN, which is the same as replacing each
+                # NaN by the identity
+                data = nplike.where(
+                    nplike.isnan(data), self._identity_for(data.dtype), data
+                )
+                result_scalar = nplike.min(data, axis=None)
             if self.initial is not None:
                 initial_val = nplike.asarray(self.initial, dtype=data.dtype)
                 result_scalar = nplike.minimum(result_scalar, initial_val)
@@ -903,6 +910,13 @@ class AxisNoneMax(Max):
             result_scalar = nplike.asarray(val, dtype=data.dtype)
         else:
             result_scalar = nplike.max(data, axis=None)
+            if data.dtype.kind in "fc" and nplike.isnan(result_scalar):
+                # the kernels skip NaN, which is the same as replacing each
+                # NaN by the identity
+                data = nplike.where(
+                    nplike.isnan(data), self._identity_for(data.dtype), data
+                )
+                result_scalar = nplike.max(data, axis=None)
             if self.initial is not None:
                 initial_val = nplike.asarray(self.initial, dtype=data.dtype)
                 result_scalar = nplike.maximum(result_scalar, initial_val)
