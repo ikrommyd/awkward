@@ -55,3 +55,20 @@ def test_datetime_is_not_cast():
 
     with pytest.raises(ValueError, match="cannot compute the sum"):
         ak.mean(x)
+
+
+def test_floating_point_is_cast_only_where_numpy_casts_it():
+    layout = ak.contents.NumpyArray(np.array([0.1, 0.25, 0.7], dtype=np.float32))
+
+    # np.mean, np.var, and np.std compute in the dtype of the input
+    assert ak._do.integers_to_float64(layout) is layout
+    # np.cov and np.corrcoef compute in at least float64
+    assert ak._do.real_numbers_to_float64(layout).dtype == np.dtype(np.float64)
+
+
+def test_float32_covar_and_corr():
+    x = np.array([0.1, 0.25, 0.7], dtype=np.float32)
+    y = np.array([0.3, 0.2, 0.9], dtype=np.float32)
+
+    np.testing.assert_allclose(np.cov(x, y, ddof=0)[0][1], ak.covar(x, y), rtol=1e-12)
+    np.testing.assert_allclose(np.corrcoef(x, y)[0][1], ak.corr(x, y), rtol=1e-12)

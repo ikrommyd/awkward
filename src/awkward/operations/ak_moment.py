@@ -120,9 +120,9 @@ def _impl(
             ),
         )
 
-    x = ctx.wrap(ak._do.real_numbers_to_float64(x_layout))
+    x = ctx.wrap(ak._do.integers_to_float64(x_layout))
     if weight_layout is not None:
-        weight_layout = ak._do.real_numbers_to_float64(weight_layout)
+        weight_layout = ak._do.integers_to_float64(weight_layout)
     weight = ctx.wrap(weight_layout, allow_other=True)
 
     with np.errstate(invalid="ignore", divide="ignore"):

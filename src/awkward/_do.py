@@ -200,29 +200,49 @@ def numbers_to_type(layout: Content, name: str, including_unknown: bool) -> Cont
     return layout._numbers_to_type(name, including_unknown)
 
 
+def _number_dtypes(layout: Content):
+    # dtypes of the NumpyArray leaves, not counting the characters of strings
+    if layout.is_numpy:
+        if layout.parameter("__array__") not in ("char", "byte"):
+            yield layout.dtype
+    elif layout.is_record or layout.is_union:
+        for content in layout.contents:
+            yield from _number_dtypes(content)
+    elif not layout.is_unknown:
+        yield from _number_dtypes(layout.content)
+
+
+def integers_to_float64(layout: Content) -> Content:
+    """
+    Args:
+        layout: The data to cast.
+
+    Casts boolean and integer data to float64, as #ak.values_astype does, so
+    that sums over the data do not overflow. NumPy's `mean`, `var`, and `std`
+    do the same.
+
+    All other data (floating point and complex numbers, date-times, and time
+    differences) are returned as they are.
+    """
+    if all(dtype.kind in "biu" for dtype in _number_dtypes(layout)):
+        return layout._numbers_to_type("float64", False)
+    else:
+        return layout
+
+
 def real_numbers_to_float64(layout: Content) -> Content:
     """
     Args:
         layout: The data to cast.
 
     Casts boolean, integer, and floating point data to float64, as
-    #ak.values_astype does, so that sums over the data do not overflow.
+    #ak.values_astype does. NumPy's `cov` and `corrcoef` do the same.
 
     Data that are not real numbers (complex numbers, date-times, and time
     differences) are returned as they are, because a cast to float64 would
     discard the imaginary part or the units.
     """
-
-    def leaf_dtypes(layout):
-        if layout.is_numpy:
-            yield layout.dtype
-        elif layout.is_record or layout.is_union:
-            for content in layout.contents:
-                yield from leaf_dtypes(content)
-        elif not layout.is_unknown:
-            yield from leaf_dtypes(layout.content)
-
-    if all(dtype.kind in "biuf" for dtype in leaf_dtypes(layout)):
+    if all(dtype.kind in "biuf" for dtype in _number_dtypes(layout)):
         return layout._numbers_to_type("float64", False)
     else:
         return layout
