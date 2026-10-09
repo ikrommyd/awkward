@@ -120,25 +120,10 @@ def _impl(
             ),
         )
 
-    x = ctx.wrap(x_layout)
-    x = ak.operations.ak_values_astype._impl(
-        x,
-        np.float64,
-        including_unknown=False,
-        highlevel=True,
-        behavior=ctx.behavior,
-        attrs=ctx.attrs,
-    )
+    x = ctx.wrap(ak._do.real_numbers_to_float64(x_layout))
+    if weight_layout is not None:
+        weight_layout = ak._do.real_numbers_to_float64(weight_layout)
     weight = ctx.wrap(weight_layout, allow_other=True)
-    if weight is not None:
-        weight = ak.operations.ak_values_astype._impl(
-            weight,
-            np.float64,
-            including_unknown=False,
-            highlevel=True,
-            behavior=ctx.behavior,
-            attrs=ctx.attrs,
-        )
 
     with np.errstate(invalid="ignore", divide="ignore"):
         if weight is None:
