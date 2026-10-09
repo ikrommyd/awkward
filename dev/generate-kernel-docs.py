@@ -19,7 +19,7 @@ def genkerneldocs():
     prefix = """Kernel interface and specification
 ----------------------------------
 
-All array manipulation that is not performed by NumPy is executed in Awkward Array's low-level "kernels." These functions communicate entirely by side-effects, manipulating already-allocated arrays, and therefore can be implemented with a pure C interface. They're called "kernels" because their signatures are similar to GPU kernels, to make them easier to port to GPUs and similar devices.
+All array manipulation that is not performed by NumPy is executed in Awkward Array's low-level "kernels." These functions communicate entirely by side-effects, manipulating already-allocated arrays, and therefore can be implemented with a pure C interface.
 
 All of the kernel functions that Awkward Array uses are documented below. These are internal details of Awkward Array, subject to change at any time, not a public API. The reason that we are documenting the API is to specify the behavior that the compiled kernels must have. The definitions below are expressed in Python code, but the implementations used by Awkward Array are compiled.
 
