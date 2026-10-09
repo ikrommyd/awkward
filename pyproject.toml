@@ -117,7 +117,6 @@ norecursedirs = [
     "src",
     "pybind11",
     "rapidjson",
-    "studies",
 ]
 addopts = [
     "-ra",
@@ -258,7 +257,6 @@ ignore_missing_imports = true
 
 [tool.ruff]
 extend-exclude = [
-    "studies",
     "pybind11",
     "rapidjson",
     "docs-*",
@@ -315,7 +313,6 @@ mccabe.max-complexity = 100
 "src/awkward/_nplikes/*" = ["TID251"]
 "src/awkward/_operators.py" = ["TID251"]
 "tests*/*" = ["T20", "TID251"]
-"benchmarks/*" = ["T201", "TID251", "EXE001"]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "numpy".msg = "Use `numpy = ak._nplikes.Numpy.instance()` instead"

@@ -338,8 +338,7 @@ def _named_axis_to_positional_axis(
 
 # These are the strategies to handle named axis for the
 # output array when performing operations along an axis.
-# See studies/named_axis.md#named-axis-in-high-level-functions and
-# https://pytorch.org/docs/stable/name_inference.html.
+# See https://pytorch.org/docs/stable/name_inference.html.
 #
 # The possible strategies are:
 # - "keep all" (_keep_named_axis(..., None)): Keep all named axes in the output array, e.g.: `ak.drop_none`
