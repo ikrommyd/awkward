@@ -8,8 +8,6 @@ import awkward as ak
 
 jax = pytest.importorskip("jax")
 
-ak.jax.register_and_check()
-
 
 def test_from_jax():
     jax_array_1d = jax.numpy.arange(10)
@@ -36,13 +34,3 @@ def test_from_jax_tolist():
 
 def test_NumpyArray_constructor():
     assert ak.backend(ak.contents.NumpyArray(np.array([1, 2, 3]))) == "cpu"
-    assert ak.backend(ak.contents.NumpyArray(jax.numpy.array([1, 2, 3]))) == "jax"
-
-
-def test_add_2():
-    one = ak.Array([[1.1, 2.2, 3.3], [], [4.4, 5.5]], backend="jax")
-    two = 100
-    assert ak.backend(one) == "jax"
-    three = one + two
-    assert ak.to_list(three) == [[101.1, 102.2, 103.3], [], [104.4, 105.5]]
-    assert ak.backend(three) == "jax"

@@ -17,7 +17,6 @@ from awkward._namedaxis import (
     _add_named_axis,
     _unify_named_axis,
 )
-from awkward._nplikes.jax import Jax
 from awkward._nplikes.numpy import Numpy
 from awkward._nplikes.numpy_like import NumpyMetadata
 from awkward._nplikes.shape import ShapeItem, unknown_length
@@ -803,12 +802,7 @@ def apply_step(
         valid_positions = backend.nplike.nonzero(backend.nplike.logical_not(mask))[0]
         valid_count = backend.nplike.shape_item_as_index(valid_positions.shape[0])
         index = backend.nplike.full(mask.shape[0], np.int64(-1), dtype=np.int64)
-        if isinstance(backend.nplike, Jax):
-            index = index.at[valid_positions].set(
-                backend.nplike.arange(valid_count, dtype=np.int64)
-            )
-        else:
-            index[valid_positions] = backend.nplike.arange(valid_count, dtype=np.int64)
+        index[valid_positions] = backend.nplike.arange(valid_count, dtype=np.int64)
         index = Index64(index)
         valid_positions = Index64(valid_positions)
 
@@ -1034,18 +1028,10 @@ def apply_step(
         for tag, j_contents in enumerate(all_combos):
             combo = backend.nplike.asarray(j_contents, dtype=np.int64)
             mask = backend.nplike.all(combos == combo, axis=-1)
-            if isinstance(backend.nplike, Jax):
-                tags = tags.at[mask].set(tag)
-                index = index.at[mask].set(
-                    backend.nplike.arange(
-                        backend.nplike.count_nonzero(mask), dtype=np.int64
-                    )
-                )
-            else:
-                tags[mask] = tag
-                index[mask] = backend.nplike.arange(
-                    backend.nplike.count_nonzero(mask), dtype=np.int64
-                )
+            tags[mask] = tag
+            index[mask] = backend.nplike.arange(
+                backend.nplike.count_nonzero(mask), dtype=np.int64
+            )
             nextinputs = []
             it_j_contents = iter(j_contents)
             for x in inputs:

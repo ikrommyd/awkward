@@ -20,9 +20,8 @@ def materialize(
     error will be raised.
 
     The buffers of the returned array are no longer `VirtualNDArray` objects
-    even if there were any. They will become one of `numpy.ndarray`,
-    `cupy.ndarray`, or `jax.numpy.ndarray` objects, depending on the array's
-    backend.
+    even if there were any. They will become either `numpy.ndarray` or
+    `cupy.ndarray` objects, depending on the array's backend.
 
     Args:
         array : Array-like data (either an #ak.Array or an #ak.contents.Content).

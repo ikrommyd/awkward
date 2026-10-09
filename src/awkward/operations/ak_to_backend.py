@@ -27,23 +27,14 @@ def to_backend(array, backend, *, highlevel=True, behavior=None, attrs=None):
 
         conda install -c conda-forge cupy
 
-    To use `"jax"`, the `jax` package must be installed, either with::
-
-        pip install jax
-
-    or::
-
-        conda install -c conda-forge jax
-
     See #ak.kernels.
 
     Args:
         array: Array-like data (anything #ak.to_layout recognizes).
-        backend (`"cpu"`, `"cuda"`, `"jax"`, or `"typetracer"`): If `"cpu"`, the array structure is
+        backend (`"cpu"`, `"cuda"`, or `"typetracer"`): If `"cpu"`, the array structure is
             recursively copied (if need be) to main memory for use with
             the default Numpy backend; if `"cuda"`, the structure is copied
-            to the GPU(s) for use with CuPy. If `"jax"`, the structure is
-            copied to the CPU for use with JAX.
+            to the GPU(s) for use with CuPy.
         highlevel (bool): If True, return an #ak.Array; otherwise, return
             a low-level #ak.contents.Content subclass.
         behavior (None or dict): Custom #ak.behavior for the output array, if

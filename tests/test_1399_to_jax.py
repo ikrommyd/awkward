@@ -8,8 +8,6 @@ import awkward as ak
 
 jax = pytest.importorskip("jax")
 
-ak.jax.register_and_check()
-
 
 def test_to_jax_1():
     ak_array_1d = ak.Array(np.arange(10))

@@ -2,7 +2,6 @@
 
 
 import awkward as ak
-from awkward._backends.jax import JaxBackend
 from awkward._dispatch import high_level_function
 
 __all__ = ("to_jax",)
@@ -18,7 +17,9 @@ def to_jax(array):
 
     Otherwise, the function raises an error.
 
-    If `array` is a scalar, it is converted into a JAX scalar.
+    The JAX Array is placed on JAX's default device, and its dtype follows
+    JAX's own rules (e.g. 64-bit data become 32-bit unless the `jax_enable_x64`
+    option is set).
 
     See also #ak.from_jax and #ak.to_numpy.
 
@@ -36,9 +37,19 @@ def to_jax(array):
 
 
 def _impl(array):
-    layout = ak.to_layout(array, allow_record=False)
+    try:
+        import jax
+    except ModuleNotFoundError as err:
+        raise ModuleNotFoundError(
+            """to use ak.to_jax, you must install the 'jax' package with:
 
-    backend = JaxBackend.instance()
-    numpy_layout = layout.to_backend(backend)
+    pip install jax
 
-    return numpy_layout.to_backend_array(allow_missing=False)
+or
+
+    conda install -c conda-forge jax"""
+        ) from err
+
+    numpy_array = ak.operations.ak_to_numpy._impl(array, allow_missing=False)
+
+    return jax.numpy.asarray(numpy_array)
